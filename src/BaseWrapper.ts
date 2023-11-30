@@ -19,6 +19,7 @@ export interface Options {
   apiKey: string;
   apiUrl: string;
   connectionString: string;
+  debug?: boolean;
 }
 
 const isPlainObject = (obj: unknown, includeArrays = false): obj is object =>

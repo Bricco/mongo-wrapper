@@ -30,7 +30,7 @@ export class FetchWrapper<
       },
       body: EJSON.stringify({
         dataSource: this.options.dataSource,
-        database: process.env.MONGODB_DB_NAME,
+        database: this.options.database,
         collection: this.options.collection,
         ...this.sto(parameters),
       }),
@@ -42,10 +42,17 @@ export class FetchWrapper<
 
       .then(([status, data]) => {
         if (status < 200 || status >= 300) {
-          error('FetchWrapper.ts', name, parameters, Date.now() - ts);
-          throw new Error(`${status} (${data.error_code}): ${data.error}`);
+          if (this.options.debug) {
+            error('FetchWrapper.ts', name, parameters, Date.now() - ts);
+          }
+          throw new Error(
+            `${status} (${data.error_code}): ${data.error || data}`,
+          );
         }
-        debug('FetchWrapper.ts', name, parameters, Date.now() - ts);
+
+        if (this.options.debug) {
+          debug('FetchWrapper.ts', name, parameters, Date.now() - ts);
+        }
 
         return this.ots(EJSON.deserialize(data));
       });
