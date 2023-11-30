@@ -2,7 +2,7 @@
 
 A simple wrapper to get a unified interface against the [MongoDB Data API](https://docs.atlas.mongodb.com/api/data-api/) and [MongoDB Node Driver](https://www.mongodb.com/docs/drivers/node/current/)
 
-The wrapper is very useful if you want to use MongoDb in vercel edge runtime or benifit from the Nextjs built-in data cache. But still have the possibilty do run tests against a [In-Memory Storage Engine](https://www.mongodb.com/docs/manual/core/inmemory/) or use a local database with the node driver.
+The wrapper is very useful if you want to use MongoDB in [Vercel Edge Runtime](https://edge-runtime.vercel.app/) or benifit from the [Nextjs built-in data cache](https://nextjs.org/docs/app/building-your-application/caching). But still have the possibilty do run tests against an [In-Memory Storage Engine](https://www.mongodb.com/docs/manual/core/inmemory/) or use a local database with the native Node Driver.
 
 ## Install
 
