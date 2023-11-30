@@ -24,7 +24,7 @@ const db = mongodb({
 	apiUrl: 'https://data.mongodb-api.com/app/data-abc123/endpoint/data/v1',
 	dataSource: 'myCluser',
 	database: 'myDatabase',
-    connectionString: 'mongodb+srv://user:<PWD>@myCluser.apc123.mongodb.net',
+	connectionString: 'mongodb+srv://user:<PWD>@myCluser.apc123.mongodb.net',
 })
 
 const car = await db('mycollection').findOne({ filter: { type: 'car' } })
