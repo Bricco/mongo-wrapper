@@ -1,0 +1,37 @@
+{
+  "license": "MIT",
+  "name": "@bricco/mongo-wrapper",
+  "version": "1.0.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/Bricco/mongo-wrapper",
+  "repository": "github:Bricco/mongo-wrapper",
+  "description": "Mongo!",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "lint": "yarn eslint src --fix",
+    "preversion": "yarn lint",
+    "version": "yarn build && git add dist"
+  },
+  "peerDependencies": {
+    "mongodb": "^6.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "@typescript-eslint/parser": "^6.13.1",
+    "eslint": "^8.54.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
+    "mongodb": "^6.3.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.2"
+  }
+}
