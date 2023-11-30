@@ -1,8 +1,8 @@
 ## @bricco/mongo-wrapper
 
-A simple wrapper to get a unified interface for the [MongoDB Data API](https://docs.atlas.mongodb.com/api/data-api/) and [MongoDB Node Driver](https://www.mongodb.com/docs/drivers/node/current/)
+A simple wrapper to get a unified interface against the [MongoDB Data API](https://docs.atlas.mongodb.com/api/data-api/) and [MongoDB Node Driver](https://www.mongodb.com/docs/drivers/node/current/)
 
-The wrapper is very useful if you want to use nextjs edge runtime and built-in data cache in fetch. But still have the possibilty do run tests against [In-Memory Storage Engine](https://www.mongodb.com/docs/manual/core/inmemory/) or use a local database.
+The wrapper is very useful if you want to use MongoDb in vercel edge runtime or benifit from the Nextjs built-in data cache. But still have the possibilty do run tests against a [In-Memory Storage Engine](https://www.mongodb.com/docs/manual/core/inmemory/) or use a local database with the node driver.
 
 ## Install
 
