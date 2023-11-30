@@ -25,10 +25,10 @@ const db = createDb({
 	connectionString: 'mongodb+srv://user:<PWD>@myCluser.apc123.mongodb.net',
 })
 
-const car = await db('mycollection').findOne({ filter: { type: 'car' } })
+const car = await db('mycollection').findOne({ type: 'car' })
 // => { _id: "61df...", type: "car", ...etc }
 
 const useNodeDriver = true;
-const bike = await db('mycollection', useNodeDriver).findOne({ filter: { type: 'bike' } })
+const bike = await db('mycollection', useNodeDriver).findOne({ type: 'bike' })
 // => { _id: "61df...", type: "bike", ...etc }
 ```
