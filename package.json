@@ -1,13 +1,13 @@
 {
   "license": "MIT",
   "name": "@bricco/mongo-wrapper",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "publishConfig": {
     "access": "public"
   },
   "homepage": "https://github.com/Bricco/mongo-wrapper",
   "repository": "github:Bricco/mongo-wrapper",
-  "description": "Mongo!",
+  "description": "A wrapper for mongodb with a unified interface against the data API / node driver.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

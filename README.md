@@ -14,12 +14,10 @@ yarn add @bricco/mongo-wrapper
 
 ## Example
 
-Instantiate and issue a request:
-
 ```js
 import createDb from '@bricco/mongo-wrapper'
 
-const db = mongodb({
+const db = createDb({
 	apiKey: 'XXXXXXXX',
 	apiUrl: 'https://data.mongodb-api.com/app/data-abc123/endpoint/data/v1',
 	dataSource: 'myCluser',
