@@ -34,10 +34,10 @@ export class FetchWrapper<
         collection: this.options.collection,
         ...this.sto(parameters),
       }),
-      // next: {
-      //   tags: [this.options.collection],
-      // },
-    })
+      next: {
+        tags: [this.options.collection],
+      },
+    } as RequestInit)
       .then(response => Promise.all([response.status, response.json()]))
 
       .then(([status, data]) => {
