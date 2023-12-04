@@ -26,47 +26,35 @@ const cc = {
 };
 
 // This function is used to debug log. Only exists in development mode.
-export const debug =
-  process.env.NODE_ENV === 'development'
-    ? (
-        name?: string,
-        method?: string,
-        parameters?: object,
-        ms?: number,
-      ): void => {
-        if (`${process.env.MONGODB_DEBUG}`.toLowerCase() === 'true') {
-          // eslint-disable-next-line no-console
-          console.debug(
-            `${cc.yellow(name)} ` +
-              `${
-                ms !== undefined && ms < 10 ? cc.blue(method) : cc.green(method)
-              } ` +
-              `${ms !== undefined && cc.gray(`(${ms}ms) `)}${JSON.stringify(
-                parameters,
-              )}`,
-          );
-        }
-      }
-    : (): void => {};
+export const debug = (
+  name?: string,
+  method?: string,
+  parameters?: object,
+  ms?: number,
+): void => {
+  // eslint-disable-next-line no-console
+  console.debug(
+    `${cc.yellow(name)} ` +
+      `${ms !== undefined && ms < 10 ? cc.blue(method) : cc.green(method)} ` +
+      `${ms !== undefined && cc.gray(`(${ms}ms) `)}${JSON.stringify(
+        parameters,
+      )}`,
+  );
+};
 
 // This function is used to error log. Only exists in development mode.
-export const error =
-  process.env.NODE_ENV === 'development'
-    ? (
-        name?: string,
-        method?: string,
-        parameters?: object,
-        ms?: number,
-      ): void => {
-        if (`${process.env.MONGODB_DEBUG}`.toLowerCase() === 'true') {
-          // eslint-disable-next-line no-console
-          console.error(
-            `${cc.yellow(name)} ` +
-              `${cc.red(method)} ` +
-              `${ms !== undefined && cc.gray(`(${ms}ms) `)}${JSON.stringify(
-                parameters,
-              )}`,
-          );
-        }
-      }
-    : (): void => {};
+export const error = (
+  name?: string,
+  method?: string,
+  parameters?: object,
+  ms?: number,
+): void => {
+  // eslint-disable-next-line no-console
+  console.error(
+    `${cc.yellow(name)} ` +
+      `${cc.red(method)} ` +
+      `${ms !== undefined && cc.gray(`(${ms}ms) `)}${JSON.stringify(
+        parameters,
+      )}`,
+  );
+};
