@@ -18,7 +18,7 @@ export interface Options {
   dataSource: string;
   apiKey: string;
   apiUrl: string;
-  connectionString: string;
+  connectionString?: string;
   debug?: boolean;
   useMongoDbDriver?: boolean;
 }

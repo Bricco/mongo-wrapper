@@ -21,6 +21,12 @@ const createDb =
   ) => {
     const ctx: Options = { ...options, collection: collection as string };
 
+    if (useMongoDbDriver && !options.connectionString) {
+      throw new Error(
+        'connectionString is required when using the mongodb driver',
+      );
+    }
+
     const _wrapper = useMongoDbDriver ? MongoDriverWrapper : FetchWrapper;
 
     return new _wrapper<T[K]>(ctx);
