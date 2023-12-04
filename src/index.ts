@@ -15,7 +15,10 @@ export type FacetResponse<T> = {
 
 const createDb =
   <T extends Models>(options: Omit<Options, 'collection'>) =>
-  <K extends keyof T>(collection: K, useMongoDbDriver = false) => {
+  <K extends keyof T>(
+    collection: K,
+    useMongoDbDriver = options?.useMongoDbDriver ?? false,
+  ) => {
     const ctx: Options = { ...options, collection: collection as string };
 
     const _wrapper = useMongoDbDriver ? MongoDriverWrapper : FetchWrapper;

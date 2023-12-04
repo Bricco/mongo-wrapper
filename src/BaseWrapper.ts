@@ -20,6 +20,7 @@ export interface Options {
   apiUrl: string;
   connectionString: string;
   debug?: boolean;
+  useMongoDbDriver?: boolean;
 }
 
 const isPlainObject = (obj: unknown, includeArrays = false): obj is object =>
