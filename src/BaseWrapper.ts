@@ -69,6 +69,8 @@ export abstract class BaseWrapper<T extends Document = Document> {
     upsert: boolean,
   ): Promise<{ matchedCount: number; modifiedCount: number }>;
 
+  abstract distinct<R extends Document = T>(field: string): Promise<R[]>;
+
   abstract deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }>;
 
   abstract deleteMany(filter: Filter<T>): Promise<{ deletedCount: number }>;
@@ -77,7 +79,7 @@ export abstract class BaseWrapper<T extends Document = Document> {
     pipeline: Document[],
   ): Promise<R[]>;
 
-  public async findById(id: string): Promise<T | null> {
+  public async findById<R extends Document = T>(id: string): Promise<R | null> {
     return this.findOne({ _id: new ObjectId(id) } as Filter<T>);
   }
 
