@@ -43,7 +43,12 @@ export class FetchWrapper<
       .then(([status, data]) => {
         if (status < 200 || status >= 300) {
           if (this.options.debug) {
-            error('FetchWrapper.ts', name, parameters, Date.now() - ts);
+            error(
+              'FetchWrapper.ts',
+              `${this.options.collection}.${name}`,
+              parameters,
+              Date.now() - ts,
+            );
           }
           throw new Error(
             `${status} (${data.error_code}): ${data.error || data}`,
@@ -51,7 +56,12 @@ export class FetchWrapper<
         }
 
         if (this.options.debug) {
-          debug('FetchWrapper.ts', name, parameters, Date.now() - ts);
+          debug(
+            'FetchWrapper.ts',
+            `${this.options.collection}.${name}`,
+            parameters,
+            Date.now() - ts,
+          );
         }
 
         return this.ots(EJSON.deserialize(data));
