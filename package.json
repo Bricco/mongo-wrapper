@@ -1,7 +1,7 @@
 {
   "license": "MIT",
   "name": "@bricco/mongo-wrapper",
-  "version": "1.0.13",
+  "version": "1.0.15",
   "publishConfig": {
     "access": "public"
   },
