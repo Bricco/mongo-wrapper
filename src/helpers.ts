@@ -1,5 +1,11 @@
 import type { Sort } from 'mongodb';
 
+// bson ESM TopLevelAwait doesn't work in server actions
+// workaround is to force cjs version with require
+// https://github.com/vercel/next.js/issues/54282
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { ObjectId } = require('bson');
+
 export function getSort(sort?: string): Sort | undefined {
   if (!sort) {
     return undefined;
@@ -57,4 +63,66 @@ export const error = (
         parameters,
       )}`,
   );
+};
+
+export const isPlainObject = (
+  obj: unknown,
+  includeArrays = false,
+): obj is object =>
+  obj != null &&
+  typeof obj === 'object' &&
+  ((includeArrays && Array.isArray(obj)) ||
+    (!Array.isArray(obj) && Object.entries(obj).length > 0));
+
+export const isObjectId = (obj: unknown): obj is typeof ObjectId =>
+  obj != null && obj instanceof ObjectId;
+
+export const objectIdToString = <T>(obj: T): T => {
+  if (Array.isArray(obj)) {
+    return obj.map(value =>
+      isObjectId(value)
+        ? value.toString()
+        : isPlainObject(value, true)
+          ? objectIdToString(value)
+          : value,
+    ) as T;
+  }
+
+  return isPlainObject(obj)
+    ? (Object.fromEntries(
+        Object.entries(obj).map(([key, value]) => [
+          key,
+          isObjectId(value)
+            ? value.toString()
+            : isPlainObject(value, true)
+              ? objectIdToString(value)
+              : value,
+        ]),
+      ) as T)
+    : obj; // Date or other type of object
+};
+
+export const stringToObjectId = <T>(obj: T): T => {
+  if (Array.isArray(obj)) {
+    return obj.map(value =>
+      typeof value === 'string' && ObjectId.isValid(value)
+        ? new ObjectId(value)
+        : isPlainObject(value, true)
+          ? stringToObjectId(value)
+          : value,
+    ) as T;
+  }
+
+  return isPlainObject(obj)
+    ? (Object.fromEntries(
+        Object.entries(obj).map(([key, value]) => [
+          key,
+          typeof value === 'string' && ObjectId.isValid(value)
+            ? new ObjectId(value)
+            : isPlainObject(value, true)
+              ? stringToObjectId(value)
+              : value,
+        ]),
+      ) as T)
+    : obj; // Date or other type of object
 };

@@ -4,6 +4,8 @@ import { Options } from './BaseWrapper';
 import { FetchWrapper } from './FetchWrapper';
 import MongoDriverWrapper from './MongoDriverWrapper';
 
+export { objectIdToString, stringToObjectId } from './helpers';
+
 type Models = {
   [collection: string]: Document;
 };

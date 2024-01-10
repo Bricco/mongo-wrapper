@@ -6,6 +6,8 @@ import type {
   OptionalUnlessRequiredId,
 } from 'mongodb';
 
+import { objectIdToString, stringToObjectId } from './helpers';
+
 // bson ESM TopLevelAwait doesn't work in server actions
 // workaround is to force cjs version with require
 // https://github.com/vercel/next.js/issues/54282
@@ -22,15 +24,6 @@ export interface Options {
   debug?: boolean;
   useMongoDbDriver?: boolean;
 }
-
-const isPlainObject = (obj: unknown, includeArrays = false): obj is object =>
-  obj != null &&
-  typeof obj === 'object' &&
-  ((includeArrays && Array.isArray(obj)) ||
-    (!Array.isArray(obj) && Object.entries(obj).length > 0));
-
-const isObjectId = (obj: unknown): obj is typeof ObjectId =>
-  obj != null && obj instanceof ObjectId;
 
 export abstract class BaseWrapper<T extends Document = Document> {
   protected options: Options;
@@ -82,52 +75,10 @@ export abstract class BaseWrapper<T extends Document = Document> {
   }
 
   protected ots<T>(obj: T): T {
-    if (Array.isArray(obj)) {
-      return obj.map(value =>
-        isObjectId(value)
-          ? value.toString()
-          : isPlainObject(value, true)
-            ? this.ots(value)
-            : value,
-      ) as T;
-    }
-
-    return isPlainObject(obj)
-      ? (Object.fromEntries(
-          Object.entries(obj).map(([key, value]) => [
-            key,
-            isObjectId(value)
-              ? value.toString()
-              : isPlainObject(value, true)
-                ? this.ots(value)
-                : value,
-          ]),
-        ) as T)
-      : obj; // Date or other type of object
+    return objectIdToString(obj);
   }
 
   protected sto<T>(obj: T): T {
-    if (Array.isArray(obj)) {
-      return obj.map(value =>
-        typeof value === 'string' && ObjectId.isValid(value)
-          ? new ObjectId(value)
-          : isPlainObject(value, true)
-            ? this.sto(value)
-            : value,
-      ) as T;
-    }
-
-    return isPlainObject(obj)
-      ? (Object.fromEntries(
-          Object.entries(obj).map(([key, value]) => [
-            key,
-            typeof value === 'string' && ObjectId.isValid(value)
-              ? new ObjectId(value)
-              : isPlainObject(value, true)
-                ? this.sto(value)
-                : value,
-          ]),
-        ) as T)
-      : obj; // Date or other type of object
+    return stringToObjectId(obj);
   }
 }
