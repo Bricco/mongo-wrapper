@@ -93,8 +93,10 @@ export default class MongoDriverWrapper<
       .then(result => this.ots(result));
   }
 
-  public async distinct<R extends Document = T>(field: string): Promise<R[]> {
-    return (await this.db()).distinct(field).then(result => this.ots(result));
+  public async distinct<R = string>(field: string): Promise<R[]> {
+    return (await this.db())
+      .distinct(field)
+      .then(result => this.ots(result) as R[]);
   }
 
   public async deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }> {

@@ -62,7 +62,7 @@ export abstract class BaseWrapper<T extends Document = Document> {
     upsert: boolean,
   ): Promise<{ matchedCount: number; modifiedCount: number }>;
 
-  abstract distinct<R extends Document = T>(field: string): Promise<R[]>;
+  abstract distinct<R = string>(field: string): Promise<R[]>;
 
   abstract deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }>;
 

@@ -115,10 +115,14 @@ export class FetchWrapper<
     return this.reqest('updateMany', { filter, update, upsert });
   }
 
-  public async distinct<R extends Document = T>(field: string): Promise<R[]> {
-    return this.reqest<{ documents: R[] }>('distinct', { field }).then(
-      resp => resp.documents,
-    );
+  public async distinct<R = string>(field: string): Promise<R[]> {
+    return this.aggregate([
+      {
+        $group: {
+          _id: `$${field}`,
+        },
+      },
+    ]).then(resp => this.ots(resp.map((r: Document) => r._id)));
   }
 
   public async deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }> {
