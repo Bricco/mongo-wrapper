@@ -37,6 +37,7 @@ export class FetchWrapper<
       next: {
         tags: [this.options.collection],
       },
+      cache: 'force-cache',
     } as RequestInit)
       .then(response => Promise.all([response.status, response.json()]))
 
