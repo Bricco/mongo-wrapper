@@ -15,6 +15,8 @@ import { debug, error } from './helpers';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { EJSON } = require('bson');
 
+const mutationMethods = ['insertOne', 'insertMany', 'updateOne', 'updateMany'];
+
 export class FetchWrapper<
   T extends Document = Document,
 > extends BaseWrapper<T> {
@@ -37,11 +39,11 @@ export class FetchWrapper<
       next: {
         tags: [this.options.collection],
       },
-      cache: 'force-cache',
+      cache: mutationMethods.includes(name) ? undefined : 'force-cache',
     } as RequestInit)
       .then(response => Promise.all([response.status, response.json()]))
 
-      .then(([status, data]) => {
+      .then(async ([status, data]) => {
         if (status < 200 || status >= 300) {
           if (this.options.debug) {
             error(
@@ -63,6 +65,16 @@ export class FetchWrapper<
             parameters,
             Date.now() - ts,
           );
+        }
+
+        if (mutationMethods.includes(name)) {
+          try {
+            await import('next/cache').then(({ revalidateTag }) =>
+              revalidateTag(this.options.collection),
+            );
+          } catch {
+            // Empty
+          }
         }
 
         return this.ots(EJSON.deserialize(data));
