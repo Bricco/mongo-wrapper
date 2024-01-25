@@ -15,7 +15,14 @@ import { debug, error } from './helpers';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { EJSON } = require('bson');
 
-const mutationMethods = ['insertOne', 'insertMany', 'updateOne', 'updateMany'];
+const mutationMethods = [
+  'insertOne',
+  'insertMany',
+  'updateOne',
+  'updateMany',
+  'deleteOne',
+  'deleteMany',
+];
 
 export class FetchWrapper<
   T extends Document = Document,
