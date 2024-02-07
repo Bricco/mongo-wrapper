@@ -75,7 +75,7 @@ export const isPlainObject = (
     (!Array.isArray(obj) && Object.entries(obj).length > 0));
 
 export const isObjectId = (obj: unknown): obj is typeof ObjectId =>
-  obj != null && obj instanceof ObjectId;
+  ObjectId.is(obj);
 
 export const objectIdToString = <T>(obj: T): T => {
   if (Array.isArray(obj)) {
