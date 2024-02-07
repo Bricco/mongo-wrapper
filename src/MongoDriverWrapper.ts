@@ -35,6 +35,15 @@ export default class MongoDriverWrapper<
     return (await _database).collection<T>(this.options.collection);
   }
 
+  protected onMutation = async (action: string): Promise<void> => {
+    if (this.options.onMutation) {
+      await this.options.onMutation({
+        collection: this.options.collection,
+        action,
+      });
+    }
+  };
+
   public async findOne<R extends Document = T>(
     filter: Filter<T>,
     projection?: Document,
@@ -59,7 +68,10 @@ export default class MongoDriverWrapper<
   ): Promise<{ insertedId: InferIdType<T> }> {
     return (await this.db())
       .insertOne(this.sto(document))
-      .then(result => this.ots(result));
+      .then(async result => {
+        await this.onMutation('insertOne');
+        return this.ots(result);
+      });
   }
 
   public async insertMany(
@@ -68,7 +80,10 @@ export default class MongoDriverWrapper<
     return (await this.db())
       .insertMany(this.sto(documents))
       .then(({ insertedIds }) => ({ insertedIds: Object.values(insertedIds) }))
-      .then(result => this.ots(result));
+      .then(async result => {
+        await this.onMutation('insertMany');
+        return this.ots(result);
+      });
   }
 
   public async updateOne(
@@ -80,7 +95,10 @@ export default class MongoDriverWrapper<
       .updateOne(this.sto(filter), this.sto(update), {
         upsert,
       })
-      .then(result => this.ots(result));
+      .then(async result => {
+        await this.onMutation('updateOne');
+        return this.ots(result);
+      });
   }
 
   public async updateMany(
@@ -90,7 +108,10 @@ export default class MongoDriverWrapper<
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return (await this.db())
       .updateMany(this.sto(filter), this.sto(update), { upsert })
-      .then(result => this.ots(result));
+      .then(async result => {
+        await this.onMutation('updateMany');
+        return this.ots(result);
+      });
   }
 
   public async distinct<R = string>(field: string): Promise<R[]> {
@@ -100,17 +121,19 @@ export default class MongoDriverWrapper<
   }
 
   public async deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }> {
-    return (await this.db())
-      .deleteOne(this.sto(filter))
-      .then(result => this.ots(result));
+    return (await this.db()).deleteOne(this.sto(filter)).then(async result => {
+      await this.onMutation('deleteOne');
+      return this.ots(result);
+    });
   }
 
   public async deleteMany(
     filter: Filter<T>,
   ): Promise<{ deletedCount: number }> {
-    return (await this.db())
-      .deleteMany(this.sto(filter))
-      .then(result => this.ots(result));
+    return (await this.db()).deleteMany(this.sto(filter)).then(async result => {
+      await this.onMutation('deleteMany');
+      return this.ots(result);
+    });
   }
 
   public async aggregate<R extends Document = Document>(

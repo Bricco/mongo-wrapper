@@ -74,14 +74,11 @@ export class FetchWrapper<
           );
         }
 
-        if (mutationMethods.includes(name)) {
-          try {
-            await import('next/cache').then(({ revalidateTag }) =>
-              revalidateTag(this.options.collection),
-            );
-          } catch {
-            // Empty
-          }
+        if (mutationMethods.includes(name) && this.options?.onMutation) {
+          await this.options.onMutation({
+            collection: this.options.collection,
+            action: name,
+          });
         }
 
         return this.ots(EJSON.deserialize(data));

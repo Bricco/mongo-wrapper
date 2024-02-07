@@ -23,6 +23,10 @@ export interface Options {
   connectionString?: string;
   debug?: boolean;
   useMongoDbDriver?: boolean;
+  onMutation?: (props: {
+    collection: string;
+    action: string;
+  }) => void | Promise<void>;
 }
 
 export abstract class BaseWrapper<T extends Document = Document> {
