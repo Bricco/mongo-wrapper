@@ -76,7 +76,7 @@ export abstract class BaseWrapper<T extends Document = Document> {
     pipeline: Document[],
   ): AsyncGenerator<R>;
 
-  abstract findCursor<R extends Document = Document>(
+  abstract findCursor<R extends Document = T>(
     filter: Filter<T>,
     options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
   ): AsyncGenerator<R>;

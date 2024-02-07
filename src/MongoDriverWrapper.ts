@@ -132,7 +132,7 @@ export default class MongoDriverWrapper<
     }
   }
 
-  public async *findCursor<R extends Document = Document>(
+  public async *findCursor<R extends Document = T>(
     filter: Filter<T>,
     options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
   ): AsyncGenerator<R> {

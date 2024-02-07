@@ -167,7 +167,7 @@ export class FetchWrapper<
     throw new Error('Cursor is not working when using fetch');
   }
 
-  findCursor<R extends Document = Document>(): AsyncGenerator<R> {
+  findCursor<R extends Document = T>(): AsyncGenerator<R> {
     throw new Error('Cursor is not working when using fetch');
   }
 }
