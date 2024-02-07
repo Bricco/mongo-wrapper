@@ -121,4 +121,26 @@ export default class MongoDriverWrapper<
       .toArray()
       .then(result => this.ots(result));
   }
+
+  public async *cursor<R extends Document = Document>(
+    pipeline: Document[],
+  ): AsyncGenerator<R> {
+    for await (const doc of (await this.db()).aggregate<R>(
+      this.sto(pipeline),
+    )) {
+      yield this.ots(doc);
+    }
+  }
+
+  public async *findCursor<R extends Document = Document>(
+    filter: Filter<T>,
+    options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
+  ): AsyncGenerator<R> {
+    for await (const doc of (await this.db()).find<R>(
+      this.sto(filter),
+      options,
+    )) {
+      yield this.ots(doc);
+    }
+  }
 }

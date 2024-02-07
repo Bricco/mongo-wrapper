@@ -162,4 +162,12 @@ export class FetchWrapper<
       resp => resp.documents,
     );
   }
+
+  cursor<R extends Document = Document>(): AsyncGenerator<R> {
+    throw new Error('Cursor is not working when using fetch');
+  }
+
+  findCursor<R extends Document = Document>(): AsyncGenerator<R> {
+    throw new Error('Cursor is not working when using fetch');
+  }
 }

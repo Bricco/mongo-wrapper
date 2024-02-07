@@ -72,6 +72,15 @@ export abstract class BaseWrapper<T extends Document = Document> {
     pipeline: Document[],
   ): Promise<R[]>;
 
+  abstract cursor<R extends Document = Document>(
+    pipeline: Document[],
+  ): AsyncGenerator<R>;
+
+  abstract findCursor<R extends Document = Document>(
+    filter: Filter<T>,
+    options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
+  ): AsyncGenerator<R>;
+
   public async findById<R extends Document = T>(id: string): Promise<R | null> {
     return this.findOne({ _id: new ObjectId(id) } as Filter<T>);
   }
