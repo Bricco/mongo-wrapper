@@ -27,6 +27,21 @@ const mutationMethods = [
 export class FetchWrapper<
   T extends Document = Document,
 > extends BaseWrapper<T> {
+  private async getCacheField(name: string): Promise<string> {
+    if (mutationMethods.includes(name)) {
+      return 'no-store';
+    }
+
+    if (this.options?.shouldRevalidate) {
+      const revalidate = await this.options.shouldRevalidate(
+        this.options.collection,
+      );
+      return revalidate ? 'no-cache' : 'force-cache';
+    }
+
+    return 'force-cache';
+  }
+
   private async reqest<Resp>(name: string, parameters: object): Promise<Resp> {
     const ts = Date.now();
     return fetch(`${this.options.apiUrl}/action/${name}`, {
@@ -46,11 +61,7 @@ export class FetchWrapper<
       next: {
         tags: [this.options.collection],
       },
-      cache: mutationMethods.includes(name)
-        ? 'no-store'
-        : this.options?.shouldRevalidate?.(this.options.collection)
-          ? 'no-cache'
-          : 'force-cache',
+      cache: await this.getCacheField(name),
     } as RequestInit)
       .then(response => Promise.all([response.status, response.json()]))
 

@@ -27,7 +27,7 @@ export interface Options {
     collection: string;
     action: string;
   }) => void | Promise<void>;
-  shouldRevalidate?: (tag: string) => void | Promise<void>;
+  shouldRevalidate?: (tag: string) => boolean | Promise<boolean>;
 }
 
 export abstract class BaseWrapper<T extends Document = Document> {
