@@ -46,7 +46,11 @@ export class FetchWrapper<
       next: {
         tags: [this.options.collection],
       },
-      cache: mutationMethods.includes(name) ? undefined : 'force-cache',
+      cache: mutationMethods.includes(name)
+        ? 'no-store'
+        : this.options?.shouldRevalidate?.(this.options.collection)
+          ? 'no-cache'
+          : 'force-cache',
     } as RequestInit)
       .then(response => Promise.all([response.status, response.json()]))
 
