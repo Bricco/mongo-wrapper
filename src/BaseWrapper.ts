@@ -8,12 +8,6 @@ import type {
 
 import { objectIdToString, stringToObjectId } from './helpers';
 
-// bson ESM TopLevelAwait doesn't work in server actions
-// workaround is to force cjs version with require
-// https://github.com/vercel/next.js/issues/54282
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { ObjectId } = require('bson');
-
 export interface Options {
   collection: string;
   database: string;
@@ -87,7 +81,7 @@ export abstract class BaseWrapper<T extends Document = Document> {
   ): AsyncGenerator<R>;
 
   public async findById<R extends Document = T>(id: string): Promise<R | null> {
-    return this.findOne({ _id: new ObjectId(id) } as Filter<T>);
+    return this.findOne({ _id: id } as Filter<T>);
   }
 
   protected ots<T>(obj: T): T {

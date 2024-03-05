@@ -1,38 +1,47 @@
 import type {
   Collection,
-  Db,
   Document,
   Filter,
   FindOptions,
   InferIdType,
+  MongoClient,
   OptionalUnlessRequiredId,
 } from 'mongodb';
 
 import { BaseWrapper } from './BaseWrapper';
 
-let _database: Promise<Db> | undefined;
-
 export default class MongoDriverWrapper<
   T extends Document = Document,
 > extends BaseWrapper<T> {
   async db(): Promise<Collection<T>> {
-    if (!_database) {
-      if (process.env.NEXT_RUNTIME !== 'edge') {
-        _database = new Promise<Db>(resolve => {
-          import('mongodb').then(({ MongoClient }) => {
-            resolve(
-              new MongoClient(
+    if (!globalThis._database) {
+      if (!globalThis._connectionPromise) {
+        if (process.env.NEXT_RUNTIME !== 'edge') {
+          global._connectionPromise = new Promise<MongoClient>(resolve => {
+            import('mongodb').then(async ({ MongoClient }) => {
+              const client = await MongoClient.connect(
                 `${this.options.connectionString}?retryWrites=true&w=majority`,
-              ).db(this.options.database),
-            );
+                {
+                  socketTimeoutMS: 20000,
+                  maxIdleTimeMS: 10000,
+                  serverSelectionTimeoutMS: 10000,
+                },
+              );
+
+              resolve(client);
+            });
           });
-        });
-      } else {
-        throw new Error('MongoDriverWrapper is not supported in edge runtime');
+        } else {
+          throw new Error(
+            'MongoDriverWrapper is not supported in edge runtime',
+          );
+        }
       }
+
+      globalThis._database = await globalThis._connectionPromise;
     }
 
-    return (await _database).collection<T>(this.options.collection);
+    return globalThis._database.db(this.options.collection);
   }
 
   protected onMutation = async (action: string): Promise<void> => {
@@ -57,10 +66,11 @@ export default class MongoDriverWrapper<
     filter: Filter<T> = {},
     options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
   ): Promise<R[]> {
-    return (await this.db())
-      .find<R>(this.sto(filter), options)
-      .toArray()
-      .then(result => this.ots(result));
+    const cursor = (await this.db()).find<R>(this.sto(filter), options);
+    const result = await cursor.toArray();
+
+    await cursor.close();
+    return this.ots(result);
   }
 
   public async insertOne(
@@ -139,31 +149,33 @@ export default class MongoDriverWrapper<
   public async aggregate<R extends Document = Document>(
     pipeline: Document[],
   ): Promise<R[]> {
-    return (await this.db())
-      .aggregate<R>(this.sto(pipeline))
-      .toArray()
-      .then(result => this.ots(result));
+    const cursor = (await this.db()).aggregate<R>(this.sto(pipeline));
+    const result = await cursor.toArray();
+
+    await cursor.close();
+    return this.ots(result);
   }
 
   public async *cursor<R extends Document = Document>(
     pipeline: Document[],
   ): AsyncGenerator<R> {
-    for await (const doc of (await this.db()).aggregate<R>(
-      this.sto(pipeline),
-    )) {
+    const cursor = (await this.db()).aggregate<R>(this.sto(pipeline));
+
+    for await (const doc of cursor) {
       yield this.ots(doc);
     }
+
+    await cursor.close();
   }
 
   public async *findCursor<R extends Document = T>(
     filter: Filter<T>,
     options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
   ): AsyncGenerator<R> {
-    for await (const doc of (await this.db()).find<R>(
-      this.sto(filter),
-      options,
-    )) {
+    const cursor = (await this.db()).find<R>(this.sto(filter), options);
+    for await (const doc of cursor) {
       yield this.ots(doc);
     }
+    await cursor.close();
   }
 }
