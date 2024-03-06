@@ -30,7 +30,9 @@ export default class MongoDriverWrapper<
       }
     }
 
-    return globalThis._connectionPromise;
+    return (await globalThis._connectionPromise).collection(
+      this.options.collection,
+    );
   }
 
   protected onMutation = async (action: string): Promise<void> => {
