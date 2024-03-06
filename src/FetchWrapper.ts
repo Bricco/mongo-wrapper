@@ -6,7 +6,7 @@ import type {
   OptionalUnlessRequiredId,
 } from 'mongodb';
 
-import { BaseWrapper } from './BaseWrapper';
+import { BaseWrapper, QueryOptions } from './BaseWrapper';
 import { debug, error } from './helpers';
 
 // bson ESM TopLevelAwait doesn't work in server actions
@@ -24,9 +24,10 @@ const mutationMethods = [
   'deleteMany',
 ];
 
-export class FetchWrapper<
-  T extends Document = Document,
-> extends BaseWrapper<T> {
+export class FetchWrapper<T extends Document = Document>
+  extends BaseWrapper<T>
+  implements BaseWrapper<T>
+{
   private async getCacheField(name: string): Promise<string> {
     if (mutationMethods.includes(name)) {
       return 'no-store';
@@ -102,17 +103,18 @@ export class FetchWrapper<
 
   public async findOne<R extends Document = T>(
     filter: Filter<T> = {},
-    projection?: FindOptions<T>['projection'],
+    options: { projection?: FindOptions<T>['projection'] } & QueryOptions = {},
   ): Promise<R | null> {
     return this.reqest<{ document: R | null }>('findOne', {
       filter,
-      projection,
+      ...options,
     }).then(resp => resp.document);
   }
 
   public async find<R extends Document = T>(
     filter: Filter<T> = {},
-    options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
+    options: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'> &
+      QueryOptions = {},
   ): Promise<R[]> {
     return this.reqest<{ documents: R[] }>('find', { filter, ...options }).then(
       resp => resp.documents,
@@ -169,10 +171,12 @@ export class FetchWrapper<
 
   public async aggregate<R extends Document = Document>(
     pipeline: Document[],
+    options: QueryOptions = {},
   ): Promise<R[]> {
-    return this.reqest<{ documents: R[] }>('aggregate', { pipeline }).then(
-      resp => resp.documents,
-    );
+    return this.reqest<{ documents: R[] }>('aggregate', {
+      pipeline,
+      ...options,
+    }).then(resp => resp.documents);
   }
 
   cursor<R extends Document = Document>(): AsyncGenerator<R> {

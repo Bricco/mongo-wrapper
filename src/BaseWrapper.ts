@@ -8,6 +8,10 @@ import type {
 
 import { objectIdToString, stringToObjectId } from './helpers';
 
+export type QueryOptions = {
+  noCache?: boolean;
+};
+
 export interface Options {
   collection: string;
   database: string;
@@ -33,12 +37,13 @@ export abstract class BaseWrapper<T extends Document = Document> {
 
   abstract findOne<R extends Document = T>(
     filter: Filter<T>,
-    projection?: FindOptions<T>['projection'],
+    options?: { projection?: FindOptions<T>['projection'] } & QueryOptions,
   ): Promise<R | null>;
 
   abstract find<R extends Document = T>(
     filter: Filter<T>,
-    options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
+    options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'> &
+      QueryOptions,
   ): Promise<R[]>;
 
   abstract insertOne(
@@ -69,6 +74,7 @@ export abstract class BaseWrapper<T extends Document = Document> {
 
   abstract aggregate<R extends Document = Document>(
     pipeline: Document[],
+    options?: QueryOptions,
   ): Promise<R[]>;
 
   abstract cursor<R extends Document = Document>(

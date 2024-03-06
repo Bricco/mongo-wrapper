@@ -8,7 +8,7 @@ import type {
   OptionalUnlessRequiredId,
 } from 'mongodb';
 
-import { BaseWrapper } from './BaseWrapper';
+import { BaseWrapper, QueryOptions } from './BaseWrapper';
 
 export default class MongoDriverWrapper<
   T extends Document = Document,
@@ -55,18 +55,21 @@ export default class MongoDriverWrapper<
 
   public async findOne<R extends Document = T>(
     filter: Filter<T>,
-    projection?: Document,
+    options: { projection?: FindOptions<T>['projection'] } & QueryOptions = {},
   ): Promise<R | null> {
     return (await this.db())
-      .findOne<R>(this.sto(filter), { projection })
+      .findOne<R>(this.sto(filter), { projection: options.projection })
       .then(result => this.ots(result));
   }
 
   public async find<R extends Document = T>(
     filter: Filter<T> = {},
-    options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
+    options: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'> &
+      QueryOptions = {},
   ): Promise<R[]> {
-    const cursor = (await this.db()).find<R>(this.sto(filter), options);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { noCache, ...opts } = options;
+    const cursor = (await this.db()).find<R>(this.sto(filter), opts);
     const result = await cursor.toArray();
 
     await cursor.close();
@@ -148,6 +151,8 @@ export default class MongoDriverWrapper<
 
   public async aggregate<R extends Document = Document>(
     pipeline: Document[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _options: QueryOptions = {},
   ): Promise<R[]> {
     const cursor = (await this.db()).aggregate<R>(this.sto(pipeline));
     const result = await cursor.toArray();
