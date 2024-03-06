@@ -1,10 +1,10 @@
 import type {
   Collection,
+  Db,
   Document,
   Filter,
   FindOptions,
   InferIdType,
-  MongoClient,
   OptionalUnlessRequiredId,
 } from 'mongodb';
 
@@ -14,29 +14,23 @@ export default class MongoDriverWrapper<
   T extends Document = Document,
 > extends BaseWrapper<T> {
   async db(): Promise<Collection<T>> {
-    if (!globalThis._database) {
-      if (!globalThis._connectionPromise) {
-        if (process.env.NEXT_RUNTIME !== 'edge') {
-          global._connectionPromise = new Promise<MongoClient>(resolve => {
-            import('mongodb').then(async ({ MongoClient }) => {
-              const client = await MongoClient.connect(
-                `${this.options.connectionString}?retryWrites=true&w=majority`,
-              );
+    if (!globalThis._connectionPromise) {
+      if (process.env.NEXT_RUNTIME !== 'edge') {
+        global._connectionPromise = new Promise<Db>(resolve => {
+          import('mongodb').then(async ({ MongoClient }) => {
+            const client = await MongoClient.connect(
+              `${this.options.connectionString}?retryWrites=true&w=majority`,
+            );
 
-              resolve(client);
-            });
+            resolve(client.db(this.options.database));
           });
-        } else {
-          throw new Error(
-            'MongoDriverWrapper is not supported in edge runtime',
-          );
-        }
+        });
+      } else {
+        throw new Error('MongoDriverWrapper is not supported in edge runtime');
       }
-
-      globalThis._database = await globalThis._connectionPromise;
     }
 
-    return globalThis._database.db(this.options.collection);
+    return globalThis._connectionPromise;
   }
 
   protected onMutation = async (action: string): Promise<void> => {
