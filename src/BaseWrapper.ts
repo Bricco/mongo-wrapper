@@ -9,7 +9,7 @@ import type {
 import { objectIdToString, stringToObjectId } from './helpers';
 
 export type QueryOptions = {
-  noCache?: boolean;
+  cache?: boolean;
 };
 
 export interface Options {

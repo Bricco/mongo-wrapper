@@ -28,9 +28,16 @@ export class FetchWrapper<T extends Document = Document>
   extends BaseWrapper<T>
   implements BaseWrapper<T>
 {
-  private async getCacheField(name: string): Promise<string> {
+  private async getCacheField(
+    name: string,
+    cacheOverride: boolean,
+  ): Promise<string> {
     if (mutationMethods.includes(name)) {
       return 'no-store';
+    }
+
+    if (cacheOverride === false) {
+      return 'no-cache';
     }
 
     if (this.options?.shouldRevalidate) {
@@ -43,7 +50,10 @@ export class FetchWrapper<T extends Document = Document>
     return 'force-cache';
   }
 
-  private async reqest<Resp>(name: string, parameters: object): Promise<Resp> {
+  private async reqest<Resp>(
+    name: string,
+    { cache: cacheOverride = true, ...parameters }: Document,
+  ): Promise<Resp> {
     const ts = Date.now();
     return fetch(`${this.options.apiUrl}/action/${name}`, {
       method: 'POST',
@@ -62,7 +72,7 @@ export class FetchWrapper<T extends Document = Document>
       next: {
         tags: [this.options.collection],
       },
-      cache: await this.getCacheField(name),
+      cache: await this.getCacheField(name, cacheOverride),
     } as RequestInit)
       .then(response => Promise.all([response.status, response.json()]))
 

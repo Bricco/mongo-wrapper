@@ -21,11 +21,6 @@ export default class MongoDriverWrapper<
             import('mongodb').then(async ({ MongoClient }) => {
               const client = await MongoClient.connect(
                 `${this.options.connectionString}?retryWrites=true&w=majority`,
-                {
-                  socketTimeoutMS: 20000,
-                  maxIdleTimeMS: 10000,
-                  serverSelectionTimeoutMS: 10000,
-                },
               );
 
               resolve(client);
@@ -68,7 +63,7 @@ export default class MongoDriverWrapper<
       QueryOptions = {},
   ): Promise<R[]> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { noCache, ...opts } = options;
+    const { cache, ...opts } = options;
     const cursor = (await this.db()).find<R>(this.sto(filter), opts);
     const result = await cursor.toArray();
 
