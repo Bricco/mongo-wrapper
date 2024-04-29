@@ -134,23 +134,27 @@ export class FetchWrapper<T extends Document = Document>
   public async insertOne(
     document: OptionalUnlessRequiredId<T>,
   ): Promise<{ insertedId: InferIdType<T> }> {
-    return this.reqest('insertOne', { document });
+    return this.reqest('insertOne', {
+      document: await this.onInsert(document),
+    });
   }
 
   public async insertMany(
     documents: OptionalUnlessRequiredId<T>[],
   ): Promise<{ insertedIds: InferIdType<T>[] }> {
-    return this.reqest('insertMany', { documents });
+    return this.reqest('insertMany', {
+      documents: await Promise.all(documents.map(doc => this.insertOne(doc))),
+    });
   }
 
   public async updateOne(
     filter: Filter<T>,
     update: object,
-    { ref, upsert = false }: UpdateOptions = {},
+    { skipSetOnUpdate = false, upsert = false }: UpdateOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return this.reqest('updateOne', {
       filter,
-      update: await this.addReferenceToUpdate(update, ref),
+      update: await this.onUpdate(update, skipSetOnUpdate),
       upsert,
     });
   }
@@ -158,11 +162,11 @@ export class FetchWrapper<T extends Document = Document>
   public async updateMany(
     filter: Filter<T>,
     update: object,
-    { ref, upsert = false }: UpdateOptions = {},
+    { skipSetOnUpdate = false, upsert = false }: UpdateOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return this.reqest('updateMany', {
       filter,
-      update: await this.addReferenceToUpdate(update, ref),
+      update: await this.onUpdate(update, skipSetOnUpdate),
       upsert,
     });
   }

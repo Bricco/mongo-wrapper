@@ -71,7 +71,7 @@ export default class MongoDriverWrapper<
     document: OptionalUnlessRequiredId<T>,
   ): Promise<{ insertedId: InferIdType<T> }> {
     return (await this.db())
-      .insertOne(this.sto(document))
+      .insertOne(this.sto(await this.onInsert(document)))
       .then(async result => {
         await this.onMutation('insertOne');
         return this.ots(result);
@@ -81,8 +81,9 @@ export default class MongoDriverWrapper<
   public async insertMany(
     documents: OptionalUnlessRequiredId<T>[],
   ): Promise<{ insertedIds: InferIdType<T>[] }> {
+    const docs = await Promise.all(documents.map(doc => this.onInsert(doc)));
     return (await this.db())
-      .insertMany(this.sto(documents))
+      .insertMany(this.sto(docs))
       .then(({ insertedIds }) => ({ insertedIds: Object.values(insertedIds) }))
       .then(async result => {
         await this.onMutation('insertMany');
@@ -93,12 +94,12 @@ export default class MongoDriverWrapper<
   public async updateOne(
     filter: Filter<T>,
     update: object,
-    { ref, upsert = false }: UpdateOptions = {},
+    { skipSetOnUpdate = false, upsert = false }: UpdateOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return (await this.db())
       .updateOne(
         this.sto(filter),
-        this.sto(await this.addReferenceToUpdate(update, ref)),
+        this.sto(await this.onUpdate(update, skipSetOnUpdate)),
         {
           upsert,
         },
@@ -112,12 +113,12 @@ export default class MongoDriverWrapper<
   public async updateMany(
     filter: Filter<T>,
     update: object,
-    { ref, upsert = false }: UpdateOptions = {},
+    { skipSetOnUpdate = false, upsert = false }: UpdateOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return (await this.db())
       .updateMany(
         this.sto(filter),
-        this.sto(await this.addReferenceToUpdate(update, ref)),
+        this.sto(await this.onUpdate(update, skipSetOnUpdate)),
         { upsert },
       )
       .then(async result => {

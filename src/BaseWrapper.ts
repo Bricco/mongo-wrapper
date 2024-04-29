@@ -14,13 +14,18 @@ export type QueryOptions = {
 
 export type UpdateOptions = {
   upsert?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ref?: any;
+  skipSetOnUpdate?: boolean;
 };
 
 export interface Options {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  getChangeReference(collection: string, update: object): Promise<any>;
+  setOnUpdate?: (
+    collection: string,
+    update: object,
+  ) => Promise<object | void | null>;
+  setOnInsert?: (
+    collection: string,
+    update: object,
+  ) => Promise<object | void | null>;
   collection: string;
   database: string;
   dataSource: string;
@@ -44,24 +49,54 @@ export abstract class BaseWrapper<T extends Document = Document> {
     this.options = options;
   }
 
-  protected async addReferenceToUpdate(
-    update: object,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ref: any,
-  ): Promise<object> {
-    let _ref = ref;
+  protected async onInsert<T extends object>(document: T): Promise<T> {
+    const onInsert = await this.options.setOnInsert?.(
+      this.options.collection,
+      document,
+    );
 
-    if (!ref && this.options.getChangeReference) {
-      _ref = await this.options.getChangeReference(
-        this.options.collection,
-        update,
-      );
+    if (onInsert) {
+      return { ...onInsert, ...document };
     }
 
-    if (_ref) {
-      const fieldName = this.options.changeReferenceFieldName || '_ref';
+    return document;
+  }
+
+  protected async onUpdate<T extends object>(
+    update: T,
+    skipSetOnUpdate: boolean,
+  ): Promise<T> {
+    if (skipSetOnUpdate) {
+      return update;
+    }
+
+    const onUpdate = await this.options.setOnUpdate?.(
+      this.options.collection,
+      update,
+    );
+
+    const onInsert = await this.options.setOnInsert?.(
+      this.options.collection,
+      update,
+    );
+
+    if (onUpdate) {
       update['$set'] ||= {};
-      update['$set'][fieldName] = _ref;
+      update['$set'] = { ...onUpdate, ...update['$set'] };
+    }
+
+    if (onInsert) {
+      const entries = Object.entries(onInsert).filter(
+        ([key]) => !update?.['$set']?.[key],
+      );
+
+      if (entries.length > 0) {
+        update['$setOnInsert'] ||= {};
+        update['$setOnInsert'] = {
+          ...update['$setOnInsert'],
+          ...Object.fromEntries(entries),
+        };
+      }
     }
 
     return update;
