@@ -19,6 +19,8 @@ export type UpdateOptions = {
 };
 
 export interface Options {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getChangeReference(collection: string, update: object): Promise<any>;
   collection: string;
   database: string;
   dataSource: string;
@@ -42,15 +44,28 @@ export abstract class BaseWrapper<T extends Document = Document> {
     this.options = options;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected addReferenceToUpdate = (update: object, ref: any): object => {
-    if (ref) {
+  protected async addReferenceToUpdate(
+    update: object,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ref: any,
+  ): Promise<object> {
+    let _ref = ref;
+
+    if (!ref && this.options.getChangeReference) {
+      _ref = await this.options.getChangeReference(
+        this.options.collection,
+        update,
+      );
+    }
+
+    if (_ref) {
       const fieldName = this.options.changeReferenceFieldName || '_ref';
       update['$set'] ||= {};
-      update['$set'][fieldName] = ref;
+      update['$set'][fieldName] = _ref;
     }
+
     return update;
-  };
+  }
 
   abstract findOne<R extends Document = T>(
     filter: Filter<T>,

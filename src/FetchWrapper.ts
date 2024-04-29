@@ -150,7 +150,7 @@ export class FetchWrapper<T extends Document = Document>
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return this.reqest('updateOne', {
       filter,
-      update: this.addReferenceToUpdate(update, ref),
+      update: await this.addReferenceToUpdate(update, ref),
       upsert,
     });
   }
@@ -162,7 +162,7 @@ export class FetchWrapper<T extends Document = Document>
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return this.reqest('updateMany', {
       filter,
-      update: this.addReferenceToUpdate(update, ref),
+      update: await this.addReferenceToUpdate(update, ref),
       upsert,
     });
   }

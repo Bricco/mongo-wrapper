@@ -98,7 +98,7 @@ export default class MongoDriverWrapper<
     return (await this.db())
       .updateOne(
         this.sto(filter),
-        this.sto(this.addReferenceToUpdate(update, ref)),
+        this.sto(await this.addReferenceToUpdate(update, ref)),
         {
           upsert,
         },
@@ -117,7 +117,7 @@ export default class MongoDriverWrapper<
     return (await this.db())
       .updateMany(
         this.sto(filter),
-        this.sto(this.addReferenceToUpdate(update, ref)),
+        this.sto(await this.addReferenceToUpdate(update, ref)),
         { upsert },
       )
       .then(async result => {
