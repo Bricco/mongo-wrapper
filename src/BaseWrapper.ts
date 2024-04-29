@@ -12,6 +12,12 @@ export type QueryOptions = {
   cache?: boolean;
 };
 
+export type UpdateOptions = {
+  upsert?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ref?: any;
+};
+
 export interface Options {
   collection: string;
   database: string;
@@ -26,6 +32,7 @@ export interface Options {
     action: string;
   }) => void | Promise<void>;
   shouldRevalidate?: (tag: string) => boolean | Promise<boolean>;
+  changeReferenceFieldName?: string;
 }
 
 export abstract class BaseWrapper<T extends Document = Document> {
@@ -34,6 +41,16 @@ export abstract class BaseWrapper<T extends Document = Document> {
   constructor(options: Options) {
     this.options = options;
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected addReferenceToUpdate = (update: object, ref: any): object => {
+    if (ref) {
+      const fieldName = this.options.changeReferenceFieldName || '_ref';
+      update['$set'] ||= {};
+      update['$set'][fieldName] = ref;
+    }
+    return update;
+  };
 
   abstract findOne<R extends Document = T>(
     filter: Filter<T>,
@@ -57,13 +74,13 @@ export abstract class BaseWrapper<T extends Document = Document> {
   abstract updateOne(
     filter: Filter<T>,
     update: object,
-    upsert: boolean,
+    options: UpdateOptions,
   ): Promise<{ matchedCount: number; modifiedCount: number }>;
 
   abstract updateMany(
     filter: Filter<T>,
     update: object,
-    upsert: boolean,
+    options: UpdateOptions,
   ): Promise<{ matchedCount: number; modifiedCount: number }>;
 
   abstract distinct<R = string>(field: string): Promise<R[]>;

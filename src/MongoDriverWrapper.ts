@@ -8,7 +8,7 @@ import type {
   OptionalUnlessRequiredId,
 } from 'mongodb';
 
-import { BaseWrapper, QueryOptions } from './BaseWrapper';
+import { BaseWrapper, QueryOptions, UpdateOptions } from './BaseWrapper';
 
 export default class MongoDriverWrapper<
   T extends Document = Document,
@@ -93,12 +93,16 @@ export default class MongoDriverWrapper<
   public async updateOne(
     filter: Filter<T>,
     update: object,
-    upsert: boolean = false,
+    { ref, upsert = false }: UpdateOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return (await this.db())
-      .updateOne(this.sto(filter), this.sto(update), {
-        upsert,
-      })
+      .updateOne(
+        this.sto(filter),
+        this.sto(this.addReferenceToUpdate(update, ref)),
+        {
+          upsert,
+        },
+      )
       .then(async result => {
         await this.onMutation('updateOne');
         return this.ots(result);
@@ -108,10 +112,14 @@ export default class MongoDriverWrapper<
   public async updateMany(
     filter: Filter<T>,
     update: object,
-    upsert: boolean = false,
+    { ref, upsert = false }: UpdateOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return (await this.db())
-      .updateMany(this.sto(filter), this.sto(update), { upsert })
+      .updateMany(
+        this.sto(filter),
+        this.sto(this.addReferenceToUpdate(update, ref)),
+        { upsert },
+      )
       .then(async result => {
         await this.onMutation('updateMany');
         return this.ots(result);

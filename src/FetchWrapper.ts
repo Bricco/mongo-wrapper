@@ -6,7 +6,7 @@ import type {
   OptionalUnlessRequiredId,
 } from 'mongodb';
 
-import { BaseWrapper, QueryOptions } from './BaseWrapper';
+import { BaseWrapper, QueryOptions, UpdateOptions } from './BaseWrapper';
 import { debug, error } from './helpers';
 
 // bson ESM TopLevelAwait doesn't work in server actions
@@ -146,17 +146,25 @@ export class FetchWrapper<T extends Document = Document>
   public async updateOne(
     filter: Filter<T>,
     update: object,
-    upsert: boolean = false,
+    { ref, upsert = false }: UpdateOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
-    return this.reqest('updateOne', { filter, update, upsert });
+    return this.reqest('updateOne', {
+      filter,
+      update: this.addReferenceToUpdate(update, ref),
+      upsert,
+    });
   }
 
   public async updateMany(
     filter: Filter<T>,
     update: object,
-    upsert: boolean = false,
+    { ref, upsert = false }: UpdateOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
-    return this.reqest('updateMany', { filter, update, upsert });
+    return this.reqest('updateMany', {
+      filter,
+      update: this.addReferenceToUpdate(update, ref),
+      upsert,
+    });
   }
 
   public async distinct<R = string>(field: string): Promise<R[]> {
