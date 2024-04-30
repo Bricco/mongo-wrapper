@@ -56,7 +56,7 @@ export abstract class BaseWrapper<T extends Document = Document> {
     );
 
     if (onInsert) {
-      return { ...onInsert, ...document };
+      return { ...document, ...onInsert };
     }
 
     return document;
@@ -82,7 +82,7 @@ export abstract class BaseWrapper<T extends Document = Document> {
 
     if (onUpdate) {
       update['$set'] ||= {};
-      update['$set'] = { ...onUpdate, ...update['$set'] };
+      update['$set'] = { ...update['$set'], ...onUpdate };
     }
 
     if (onInsert) {
