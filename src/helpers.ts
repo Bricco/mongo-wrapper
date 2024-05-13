@@ -126,3 +126,14 @@ export const stringToObjectId = <T>(obj: T): T => {
       ) as T)
     : obj; // Date or other type of object
 };
+
+export const onError = (error: Error): never => {
+  // Do not forward the real error
+  // That might expose sensitive information
+
+  console.error(error);
+
+  throw new Error(
+    'A database related error occurred. See the logs for detailed information.',
+  );
+};

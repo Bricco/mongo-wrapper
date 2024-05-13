@@ -9,6 +9,7 @@ import type {
 } from 'mongodb';
 
 import { BaseWrapper, QueryOptions, UpdateOptions } from './BaseWrapper';
+import { onError } from './helpers';
 
 export default class MongoDriverWrapper<
   T extends Document = Document,
@@ -50,7 +51,8 @@ export default class MongoDriverWrapper<
   ): Promise<R | null> {
     return (await this.db())
       .findOne<R>(this.sto(filter), { projection: options.projection })
-      .then(result => this.ots(result));
+      .then(result => this.ots(result))
+      .catch(onError);
   }
 
   public async find<R extends Document = T>(
@@ -61,7 +63,7 @@ export default class MongoDriverWrapper<
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { cache, ...opts } = options;
     const cursor = (await this.db()).find<R>(this.sto(filter), opts);
-    const result = await cursor.toArray();
+    const result = await cursor.toArray().catch(onError);
 
     await cursor.close();
     return this.ots(result);
@@ -72,6 +74,7 @@ export default class MongoDriverWrapper<
   ): Promise<{ insertedId: InferIdType<T> }> {
     return (await this.db())
       .insertOne(this.sto(await this.onInsert(document)))
+      .catch(onError)
       .then(async result => {
         await this.onMutation('insertOne');
         return this.ots(result);
@@ -84,6 +87,7 @@ export default class MongoDriverWrapper<
     const docs = await Promise.all(documents.map(doc => this.onInsert(doc)));
     return (await this.db())
       .insertMany(this.sto(docs))
+      .catch(onError)
       .then(({ insertedIds }) => ({ insertedIds: Object.values(insertedIds) }))
       .then(async result => {
         await this.onMutation('insertMany');
@@ -104,6 +108,7 @@ export default class MongoDriverWrapper<
           upsert,
         },
       )
+      .catch(onError)
       .then(async result => {
         await this.onMutation('updateOne');
         return this.ots(result);
@@ -121,6 +126,7 @@ export default class MongoDriverWrapper<
         this.sto(await this.onUpdate(update, skipSetOnUpdate)),
         { upsert },
       )
+      .catch(onError)
       .then(async result => {
         await this.onMutation('updateMany');
         return this.ots(result);
@@ -130,23 +136,30 @@ export default class MongoDriverWrapper<
   public async distinct<R = string>(field: string): Promise<R[]> {
     return (await this.db())
       .distinct(field)
+      .catch(onError)
       .then(result => this.ots(result) as R[]);
   }
 
   public async deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }> {
-    return (await this.db()).deleteOne(this.sto(filter)).then(async result => {
-      await this.onMutation('deleteOne');
-      return this.ots(result);
-    });
+    return (await this.db())
+      .deleteOne(this.sto(filter))
+      .catch(onError)
+      .then(async result => {
+        await this.onMutation('deleteOne');
+        return this.ots(result);
+      });
   }
 
   public async deleteMany(
     filter: Filter<T>,
   ): Promise<{ deletedCount: number }> {
-    return (await this.db()).deleteMany(this.sto(filter)).then(async result => {
-      await this.onMutation('deleteMany');
-      return this.ots(result);
-    });
+    return (await this.db())
+      .deleteMany(this.sto(filter))
+      .catch(onError)
+      .then(async result => {
+        await this.onMutation('deleteMany');
+        return this.ots(result);
+      });
   }
 
   public async aggregate<R extends Document = Document>(
@@ -155,7 +168,7 @@ export default class MongoDriverWrapper<
     _options: QueryOptions = {},
   ): Promise<R[]> {
     const cursor = (await this.db()).aggregate<R>(this.sto(pipeline));
-    const result = await cursor.toArray();
+    const result = await cursor.toArray().catch(onError);
 
     await cursor.close();
     return this.ots(result);
@@ -166,11 +179,15 @@ export default class MongoDriverWrapper<
   ): AsyncGenerator<R> {
     const cursor = (await this.db()).aggregate<R>(this.sto(pipeline));
 
-    for await (const doc of cursor) {
-      yield this.ots(doc);
+    try {
+      for await (const doc of cursor) {
+        yield this.ots(doc);
+      }
+    } catch (error) {
+      onError(error);
+    } finally {
+      await cursor.close();
     }
-
-    await cursor.close();
   }
 
   public async *findCursor<R extends Document = T>(
@@ -178,9 +195,15 @@ export default class MongoDriverWrapper<
     options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
   ): AsyncGenerator<R> {
     const cursor = (await this.db()).find<R>(this.sto(filter), options);
-    for await (const doc of cursor) {
-      yield this.ots(doc);
+
+    try {
+      for await (const doc of cursor) {
+        yield this.ots(doc);
+      }
+    } catch (error) {
+      onError(error);
+    } finally {
+      await cursor.close();
     }
-    await cursor.close();
   }
 }

@@ -7,7 +7,7 @@ import type {
 } from 'mongodb';
 
 import { BaseWrapper, QueryOptions, UpdateOptions } from './BaseWrapper';
-import { debug, error } from './helpers';
+import { debug, error, onError } from './helpers';
 
 // bson ESM TopLevelAwait doesn't work in server actions
 // workaround is to force cjs version with require
@@ -108,7 +108,8 @@ export class FetchWrapper<T extends Document = Document>
         }
 
         return this.ots(EJSON.deserialize(data));
-      });
+      })
+      .catch(onError);
   }
 
   public async findOne<R extends Document = T>(
