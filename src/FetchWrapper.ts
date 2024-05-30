@@ -144,7 +144,7 @@ export class FetchWrapper<T extends Document = Document>
     documents: OptionalUnlessRequiredId<T>[],
   ): Promise<{ insertedIds: InferIdType<T>[] }> {
     return this.reqest('insertMany', {
-      documents: await Promise.all(documents.map(doc => this.insertOne(doc))),
+      documents: await Promise.all(documents.map(doc => this.onInsert(doc))),
     });
   }
 
