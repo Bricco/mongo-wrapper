@@ -26,6 +26,8 @@ export interface Options {
     collection: string,
     update: object,
   ) => Promise<object | void | null>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cacheMethod?: (request: object) => Promise<any>;
   collection: string;
   database: string;
   dataSource: string;
@@ -87,7 +89,7 @@ export abstract class BaseWrapper<T extends Document = Document> {
 
     if (onInsert) {
       const entries = Object.entries(onInsert).filter(
-        ([key]) => !update?.['$set']?.[key],
+        ([key]) => update?.['$set']?.[key] === undefined,
       );
 
       if (entries.length > 0) {
