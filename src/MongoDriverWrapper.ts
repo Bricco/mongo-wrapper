@@ -19,7 +19,9 @@ export default class MongoDriverWrapper<
         global._connectionPromise = new Promise<Db>(resolve => {
           import('mongodb').then(async ({ MongoClient }) => {
             const client = await MongoClient.connect(
-              `${this.options.connectionString}?retryWrites=true&w=majority`,
+              this.options.connectionString.includes('?')
+                ? `${this.options.connectionString}&retryWrites=true&w=majority`
+                : `${this.options.connectionString}?retryWrites=true&w=majority`,
             );
 
             resolve(client.db(this.options.database));
