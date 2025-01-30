@@ -166,4 +166,26 @@ export abstract class BaseWrapper<T extends Document = Document> {
   protected sto<T>(obj: T): T {
     return stringToObjectId(obj);
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected onError(meta: Record<string, any>): (error: Error) => never {
+    // Do not forward the real error
+    // That might expose sensitive information
+
+    return error => {
+      console.error('MongoDB error:', {
+        error,
+        meta: {
+          collection: this.options.collection,
+          database: this.options.database,
+          dataSource: this.options.dataSource,
+          ...meta,
+        },
+      });
+
+      throw new Error(
+        'A database related error occurred. See the logs for detailed information.',
+      );
+    };
+  }
 }

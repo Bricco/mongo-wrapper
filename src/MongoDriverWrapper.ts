@@ -9,7 +9,6 @@ import type {
 } from 'mongodb';
 
 import { BaseWrapper, QueryOptions, UpdateOptions } from './BaseWrapper';
-import { onError } from './helpers';
 
 export default class MongoDriverWrapper<
   T extends Document = Document,
@@ -52,7 +51,9 @@ export default class MongoDriverWrapper<
     return (await this.db())
       .findOne<R>(this.sto(filter), { projection: options.projection })
       .then(result => this.ots(result))
-      .catch(onError);
+      .catch(
+        this.onError({ action: 'findOne', parameters: { filter, options } }),
+      );
   }
 
   public async find<R extends Document = T>(
@@ -63,7 +64,9 @@ export default class MongoDriverWrapper<
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { cache, ...opts } = options;
     const cursor = (await this.db()).find<R>(this.sto(filter), opts);
-    const result = await cursor.toArray().catch(onError);
+    const result = await cursor
+      .toArray()
+      .catch(this.onError({ action: 'find', parameters: { filter, options } }));
 
     await cursor.close();
     return this.ots(result);
@@ -74,7 +77,7 @@ export default class MongoDriverWrapper<
   ): Promise<{ insertedId: InferIdType<T> }> {
     return (await this.db())
       .insertOne(this.sto(await this.onInsert(document)))
-      .catch(onError)
+      .catch(this.onError({ action: 'insertOne', parameters: { document } }))
       .then(async result => {
         await this.onMutation('insertOne');
         return this.ots(result);
@@ -87,7 +90,7 @@ export default class MongoDriverWrapper<
     const docs = await Promise.all(documents.map(doc => this.onInsert(doc)));
     return (await this.db())
       .insertMany(this.sto(docs))
-      .catch(onError)
+      .catch(this.onError({ action: 'insertMany', parameters: { documents } }))
       .then(({ insertedIds }) => ({ insertedIds: Object.values(insertedIds) }))
       .then(async result => {
         await this.onMutation('insertMany');
@@ -108,7 +111,9 @@ export default class MongoDriverWrapper<
           upsert,
         },
       )
-      .catch(onError)
+      .catch(
+        this.onError({ action: 'updateOne', parameters: { filter, update } }),
+      )
       .then(async result => {
         await this.onMutation('updateOne');
         return this.ots(result);
@@ -126,7 +131,9 @@ export default class MongoDriverWrapper<
         this.sto(await this.onUpdate(update, skipSetOnUpdate)),
         { upsert },
       )
-      .catch(onError)
+      .catch(
+        this.onError({ action: 'updateMany', parameters: { filter, update } }),
+      )
       .then(async result => {
         await this.onMutation('updateMany');
         return this.ots(result);
@@ -136,14 +143,14 @@ export default class MongoDriverWrapper<
   public async distinct<R = string>(field: string): Promise<R[]> {
     return (await this.db())
       .distinct(field)
-      .catch(onError)
+      .catch(this.onError({ action: 'distinct', parameters: { field } }))
       .then(result => this.ots(result) as R[]);
   }
 
   public async deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }> {
     return (await this.db())
       .deleteOne(this.sto(filter))
-      .catch(onError)
+      .catch(this.onError({ action: 'deleteOne', parameters: { filter } }))
       .then(async result => {
         await this.onMutation('deleteOne');
         return this.ots(result);
@@ -155,7 +162,7 @@ export default class MongoDriverWrapper<
   ): Promise<{ deletedCount: number }> {
     return (await this.db())
       .deleteMany(this.sto(filter))
-      .catch(onError)
+      .catch(this.onError({ action: 'deleteMany', parameters: { filter } }))
       .then(async result => {
         await this.onMutation('deleteMany');
         return this.ots(result);
@@ -168,7 +175,9 @@ export default class MongoDriverWrapper<
     _options: QueryOptions = {},
   ): Promise<R[]> {
     const cursor = (await this.db()).aggregate<R>(this.sto(pipeline));
-    const result = await cursor.toArray().catch(onError);
+    const result = await cursor
+      .toArray()
+      .catch(this.onError({ action: 'aggregate', parameters: { pipeline } }));
 
     await cursor.close();
     return this.ots(result);
@@ -184,7 +193,7 @@ export default class MongoDriverWrapper<
         yield this.ots(doc);
       }
     } catch (error) {
-      onError(error);
+      this.onError({ action: 'cursor', parameters: { pipeline } })(error);
     } finally {
       await cursor.close();
     }
@@ -201,7 +210,9 @@ export default class MongoDriverWrapper<
         yield this.ots(doc);
       }
     } catch (error) {
-      onError(error);
+      this.onError({ action: 'findCursor', parameters: { filter, options } })(
+        error,
+      );
     } finally {
       await cursor.close();
     }
