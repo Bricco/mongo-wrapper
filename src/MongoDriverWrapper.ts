@@ -1,4 +1,7 @@
 import type {
+  AnyBulkWriteOperation,
+  BulkWriteOptions,
+  BulkWriteResult,
   Collection,
   Db,
   Document,
@@ -218,5 +221,65 @@ export default class MongoDriverWrapper<
     } finally {
       await cursor.close();
     }
+  }
+
+  public async bulkWrite(
+    operations: AnyBulkWriteOperation<T>[],
+    options?: BulkWriteOptions & { skipSetOnUpdate?: boolean },
+  ): Promise<BulkWriteResult> {
+    const { skipSetOnUpdate, ...opts } = options || {};
+    return (await this.db())
+      .bulkWrite(
+        this.sto(
+          await Promise.all(
+            operations.map(async op => {
+              if ('insertOne' in op) {
+                return {
+                  insertOne: {
+                    document: await this.onInsert(op.insertOne.document),
+                  },
+                };
+              }
+
+              if ('updateOne' in op) {
+                return {
+                  updateOne: {
+                    ...op.updateOne,
+                    update: await this.onUpdate(
+                      op.updateOne.update,
+                      skipSetOnUpdate,
+                    ),
+                  },
+                };
+              }
+
+              if ('updateMany' in op) {
+                return {
+                  updateMany: {
+                    ...op.updateMany,
+                    update: await this.onUpdate(
+                      op.updateMany.update,
+                      skipSetOnUpdate,
+                    ),
+                  },
+                };
+              }
+
+              return op;
+            }),
+          ),
+        ),
+        opts,
+      )
+      .catch(
+        this.onError({
+          action: 'bulkWrite',
+          parameters: { operations, options },
+        }),
+      )
+      .then(async result => {
+        await this.onMutation('bulkWrite');
+        return this.ots(result);
+      });
   }
 }

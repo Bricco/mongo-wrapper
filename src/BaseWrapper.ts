@@ -1,4 +1,7 @@
 import type {
+  AnyBulkWriteOperation,
+  BulkWriteOptions,
+  BulkWriteResult,
   Document,
   Filter,
   FindOptions,
@@ -68,7 +71,7 @@ export abstract class BaseWrapper<T extends Document = Document> {
     update: T,
     skipSetOnUpdate: boolean,
   ): Promise<T> {
-    if (skipSetOnUpdate) {
+    if (skipSetOnUpdate || Array.isArray(update)) {
       return update;
     }
 
@@ -134,6 +137,11 @@ export abstract class BaseWrapper<T extends Document = Document> {
     update: object,
     options: UpdateOptions,
   ): Promise<{ matchedCount: number; modifiedCount: number }>;
+
+  abstract bulkWrite(
+    operations: AnyBulkWriteOperation<T>[],
+    options?: BulkWriteOptions & { skipSetOnUpdate?: boolean },
+  ): Promise<BulkWriteResult>;
 
   abstract distinct<R = string>(field: string): Promise<R[]>;
 

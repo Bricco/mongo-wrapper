@@ -1,4 +1,5 @@
 import type {
+  BulkWriteResult,
   Document,
   Filter,
   FindOptions,
@@ -213,5 +214,9 @@ export class FetchWrapper<T extends Document = Document>
 
   findCursor<R extends Document = T>(): AsyncGenerator<R> {
     throw new Error('Cursor is not working when using fetch');
+  }
+
+  bulkWrite(): Promise<BulkWriteResult> {
+    throw new Error('BulkWrite is not working when using fetch');
   }
 }
