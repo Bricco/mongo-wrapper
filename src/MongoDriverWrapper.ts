@@ -32,7 +32,7 @@ export default class MongoDriverWrapper<
 
     return this.cache(operation, [method, this.options.collection, ...args], {
       tags: [this.options.collection],
-    });
+    })();
   }
 
   private getConnectionUrl(): string {

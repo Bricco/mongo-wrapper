@@ -24,7 +24,7 @@ export type CacheFunction = <T>(
   fn: () => Promise<T>,
   args: unknown[],
   options?: { revalidate?: number | false; tags?: string[] },
-) => Promise<T>;
+) => () => Promise<T>;
 
 export interface Options {
   setOnUpdate?: (
