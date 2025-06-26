@@ -29,22 +29,15 @@ export interface Options {
     collection: string,
     update: object,
   ) => Promise<object | void | null>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  cacheMethod?: (request: object) => Promise<any>;
   collection: string;
   database: string;
-  dataSource: string;
-  apiKey: string;
-  apiUrl: string;
-  connectionString?: string;
+  connectionString: string;
   debug?: boolean;
-  useMongoDbDriver?: boolean;
   onMutation?: (props: {
     collection: string;
     action: string;
   }) => void | Promise<void>;
   shouldRevalidate?: (tag: string) => boolean | Promise<boolean>;
-  changeReferenceFieldName?: string;
 }
 
 export abstract class BaseWrapper<T extends Document = Document> {
@@ -163,6 +156,14 @@ export abstract class BaseWrapper<T extends Document = Document> {
     options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
   ): AsyncGenerator<R>;
 
+  abstract count(filter: Filter<T>): Promise<number>;
+
+  abstract findOneAndUpdate<R extends Document = T>(
+    filter: Filter<T>,
+    update: object,
+    options?: UpdateOptions & { returnDocument?: 'before' | 'after' },
+  ): Promise<R | null>;
+
   public async findById<R extends Document = T>(id: string): Promise<R | null> {
     return this.findOne({ _id: id } as Filter<T>);
   }
@@ -186,7 +187,6 @@ export abstract class BaseWrapper<T extends Document = Document> {
         meta: {
           collection: this.options.collection,
           database: this.options.database,
-          dataSource: this.options.dataSource,
           ...meta,
         },
       });

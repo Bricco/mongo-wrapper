@@ -13,20 +13,54 @@ import type {
 
 import { BaseWrapper, QueryOptions, UpdateOptions } from './BaseWrapper';
 
+type CacheFunction = <T>(
+  fn: () => Promise<T>,
+  args: unknown[],
+  options?: { revalidate?: number | false; tags?: string[] },
+) => Promise<T>;
+
+export type MongoDriverWrapperOptions = {
+  cache?: CacheFunction;
+} & ConstructorParameters<typeof BaseWrapper>[0];
+
 export default class MongoDriverWrapper<
   T extends Document = Document,
 > extends BaseWrapper<T> {
+  private cache?: CacheFunction;
+
+  constructor(options: MongoDriverWrapperOptions) {
+    super(options);
+    this.cache = options.cache;
+  }
+
+  private async withCache<R>(
+    method: string,
+    operation: () => Promise<R>,
+    args: unknown[],
+    options?: { cache?: boolean },
+  ): Promise<R> {
+    if (options?.cache === false || !this.cache) {
+      return operation();
+    }
+
+    return this.cache(operation, [method, this.options.collection, ...args], {
+      tags: [this.options.collection],
+    });
+  }
+
+  private getConnectionUrl(): string {
+    const url = new URL(this.options.connectionString);
+    url.searchParams.set('retryWrites', 'true');
+    url.searchParams.set('w', 'majority');
+    return url.toString();
+  }
+
   async db(): Promise<Collection<T>> {
     if (!globalThis._connectionPromise) {
       if (process.env.NEXT_RUNTIME !== 'edge') {
         global._connectionPromise = new Promise<Db>(resolve => {
           import('mongodb').then(async ({ MongoClient }) => {
-            const client = await MongoClient.connect(
-              this.options.connectionString.includes('?')
-                ? `${this.options.connectionString}&retryWrites=true&w=majority`
-                : `${this.options.connectionString}?retryWrites=true&w=majority`,
-            );
-
+            const client = await MongoClient.connect(this.getConnectionUrl());
             resolve(client.db(this.options.database));
           });
         });
@@ -53,12 +87,21 @@ export default class MongoDriverWrapper<
     filter: Filter<T>,
     options: { projection?: FindOptions<T>['projection'] } & QueryOptions = {},
   ): Promise<R | null> {
-    return (await this.db())
-      .findOne<R>(this.sto(filter), { projection: options.projection })
-      .then(result => this.ots(result))
-      .catch(
-        this.onError({ action: 'findOne', parameters: { filter, options } }),
-      );
+    return this.withCache(
+      'findOne',
+      async () =>
+        (await this.db())
+          .findOne<R>(this.sto(filter), { projection: options.projection })
+          .then(result => this.ots(result))
+          .catch(
+            this.onError({
+              action: 'findOne',
+              parameters: { filter, options },
+            }),
+          ),
+      [filter, options],
+      { cache: options.cache },
+    );
   }
 
   public async find<R extends Document = T>(
@@ -68,13 +111,22 @@ export default class MongoDriverWrapper<
   ): Promise<R[]> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { cache, ...opts } = options;
-    const cursor = (await this.db()).find<R>(this.sto(filter), opts);
-    const result = await cursor
-      .toArray()
-      .catch(this.onError({ action: 'find', parameters: { filter, options } }));
+    return this.withCache(
+      'find',
+      async () => {
+        const cursor = (await this.db()).find<R>(this.sto(filter), opts);
+        const result = await cursor
+          .toArray()
+          .catch(
+            this.onError({ action: 'find', parameters: { filter, options } }),
+          );
 
-    await cursor.close();
-    return this.ots(result);
+        await cursor.close();
+        return this.ots(result);
+      },
+      [filter, opts],
+      { cache },
+    );
   }
 
   public async insertOne(
@@ -145,11 +197,22 @@ export default class MongoDriverWrapper<
       });
   }
 
-  public async distinct<R = string>(field: string): Promise<R[]> {
-    return (await this.db())
-      .distinct(field)
-      .catch(this.onError({ action: 'distinct', parameters: { field } }))
-      .then(result => this.ots(result) as R[]);
+  public async distinct<R = string>(
+    field: string,
+    options: QueryOptions = {},
+  ): Promise<R[]> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { cache, ..._options } = options;
+    return this.withCache(
+      'distinct',
+      async () =>
+        (await this.db())
+          .distinct(field)
+          .catch(this.onError({ action: 'distinct', parameters: { field } }))
+          .then(result => this.ots(result) as R[]),
+      [field],
+      { cache },
+    );
   }
 
   public async deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }> {
@@ -176,16 +239,26 @@ export default class MongoDriverWrapper<
 
   public async aggregate<R extends Document = Document>(
     pipeline: Document[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _options: QueryOptions = {},
+    options: QueryOptions = {},
   ): Promise<R[]> {
-    const cursor = (await this.db()).aggregate<R>(this.sto(pipeline));
-    const result = await cursor
-      .toArray()
-      .catch(this.onError({ action: 'aggregate', parameters: { pipeline } }));
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { cache, ..._options } = options;
+    return this.withCache(
+      'aggregate',
+      async () => {
+        const cursor = (await this.db()).aggregate<R>(this.sto(pipeline));
+        const result = await cursor
+          .toArray()
+          .catch(
+            this.onError({ action: 'aggregate', parameters: { pipeline } }),
+          );
 
-    await cursor.close();
-    return this.ots(result);
+        await cursor.close();
+        return this.ots(result);
+      },
+      [pipeline],
+      { cache },
+    );
   }
 
   public async *cursor<R extends Document = Document>(
@@ -221,6 +294,10 @@ export default class MongoDriverWrapper<
     } finally {
       await cursor.close();
     }
+  }
+
+  public async getClient(): Promise<Collection<T>> {
+    return await this.db();
   }
 
   public async bulkWrite(
@@ -281,5 +358,64 @@ export default class MongoDriverWrapper<
         await this.onMutation('bulkWrite');
         return this.ots(result);
       });
+  }
+
+  public async count(
+    filter: Filter<T> = {},
+    options: QueryOptions = {},
+  ): Promise<number> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { cache, ..._options } = options;
+    return this.withCache(
+      'count',
+      async () =>
+        (await this.db())
+          .countDocuments(this.sto(filter))
+          .catch(
+            this.onError({ action: 'count', parameters: { filter, options } }),
+          ),
+      [filter],
+      { cache },
+    );
+  }
+
+  public async findOneAndUpdate<R extends Document = T>(
+    filter: Filter<T>,
+    update: object,
+    options: {
+      projection?: FindOptions<T>['projection'];
+      sort?: FindOptions<T>['sort'];
+      upsert?: boolean;
+      returnDocument?: 'before' | 'after';
+      skipSetOnUpdate?: boolean;
+    } & QueryOptions = {},
+  ): Promise<R | null> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { cache, skipSetOnUpdate, ..._options } = options;
+    return this.withCache(
+      'findOneAndUpdate',
+      async () =>
+        (await this.db())
+          .findOneAndUpdate(
+            this.sto(filter),
+            this.sto(await this.onUpdate(update, skipSetOnUpdate)),
+            {
+              ..._options,
+              returnDocument: _options.returnDocument || 'after',
+            },
+          )
+          .catch(
+            this.onError({
+              action: 'findOneAndUpdate',
+              parameters: { filter, update, options },
+            }),
+          )
+          .then(async result => {
+            await this.onMutation('findOneAndUpdate');
+            return this.ots(result.value) as R | null;
+          }),
+      [filter, update, _options],
+      { cache },
+    );
   }
 }
