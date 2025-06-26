@@ -13,24 +13,11 @@ import type {
 
 import { BaseWrapper, QueryOptions, UpdateOptions } from './BaseWrapper';
 
-type CacheFunction = <T>(
-  fn: () => Promise<T>,
-  args: unknown[],
-  options?: { revalidate?: number | false; tags?: string[] },
-) => Promise<T>;
-
-export type MongoDriverWrapperOptions = {
-  cache?: CacheFunction;
-} & ConstructorParameters<typeof BaseWrapper>[0];
-
 export default class MongoDriverWrapper<
   T extends Document = Document,
 > extends BaseWrapper<T> {
-  private cache?: CacheFunction;
-
-  constructor(options: MongoDriverWrapperOptions) {
+  constructor(options) {
     super(options);
-    this.cache = options.cache;
   }
 
   private async withCache<R>(

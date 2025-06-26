@@ -20,6 +20,12 @@ export type UpdateOptions = {
   skipSetOnUpdate?: boolean;
 };
 
+export type CacheFunction = <T>(
+  fn: () => Promise<T>,
+  args: unknown[],
+  options?: { revalidate?: number | false; tags?: string[] },
+) => Promise<T>;
+
 export interface Options {
   setOnUpdate?: (
     collection: string,
@@ -33,6 +39,7 @@ export interface Options {
   database: string;
   connectionString: string;
   debug?: boolean;
+  cache?: CacheFunction;
   onMutation?: (props: {
     collection: string;
     action: string;
@@ -42,9 +49,11 @@ export interface Options {
 
 export abstract class BaseWrapper<T extends Document = Document> {
   protected options: Options;
+  protected cache?: CacheFunction;
 
   constructor(options: Options) {
     this.options = options;
+    this.cache = options.cache;
   }
 
   protected async onInsert<T extends object>(document: T): Promise<T> {
