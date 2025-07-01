@@ -1,3 +1,4 @@
+import { EJSON } from 'bson';
 import type {
   AnyBulkWriteOperation,
   BulkWriteOptions,
@@ -12,6 +13,7 @@ import type {
 } from 'mongodb';
 
 import { BaseWrapper, QueryOptions, UpdateOptions } from './BaseWrapper';
+import { debug } from './helpers';
 
 export default class MongoDriverWrapper<
   T extends Document = Document,
@@ -26,13 +28,33 @@ export default class MongoDriverWrapper<
     args: unknown[],
     options?: { cache?: boolean },
   ): Promise<R> {
+    let response: R;
+    const time = performance.now();
+
     if (options?.cache === false || !this.cache) {
-      return operation();
+      response = await operation();
+    } else {
+      const bson = await this.cache(
+        () => operation().then(EJSON.serialize),
+        [method, this.options.collection, ...args],
+        {
+          tags: [this.options.collection],
+        },
+      )();
+
+      response = EJSON.deserialize(bson as unknown as R);
     }
 
-    return this.cache(operation, [method, this.options.collection, ...args], {
-      tags: [this.options.collection],
-    })();
+    if (this.options.debug) {
+      debug(
+        this.options.collection,
+        method,
+        { args, options },
+        performance.now() - time,
+      );
+    }
+
+    return response;
   }
 
   private getConnectionUrl(): string {
