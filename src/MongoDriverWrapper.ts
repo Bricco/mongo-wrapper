@@ -34,15 +34,19 @@ export default class MongoDriverWrapper<
     if (options?.cache === false || !this.cache) {
       response = await operation();
     } else {
-      const bson = await this.cache(
+      const ejson = await this.cache(
         () => operation().then(EJSON.serialize),
-        [method, this.options.collection, ...args],
+        [
+          method,
+          this.options.collection,
+          ...args.map(x => Buffer.from(JSON.stringify(x)).toString('base64')),
+        ],
         {
           tags: [this.options.collection],
         },
       )();
 
-      response = EJSON.deserialize(bson as unknown as R);
+      response = EJSON.deserialize(ejson);
     }
 
     if (this.options.debug) {
