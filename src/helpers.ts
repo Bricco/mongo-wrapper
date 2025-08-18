@@ -58,7 +58,7 @@ export const debug = ({
     // eslint-disable-next-line no-console
     console.debug(
       `---------> ${cc.yellow(name)} ${method} ` +
-        `\n ${JSON.stringify(EJSON.stringify(parameters), null, 2)} \n`,
+        `\n ${EJSON.stringify(parameters, null, 2)} \n`,
     );
   } else {
     // eslint-disable-next-line no-console
