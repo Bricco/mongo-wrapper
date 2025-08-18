@@ -31,21 +31,58 @@ const cc = {
     text ? `\x1b[31m${text}\x1b[0m` : undefined,
 };
 
+interface DebugParams {
+  name?: string;
+  method?: string;
+  status?: 'SUCCESS' | 'START';
+  parameters?: object;
+  ms?: number;
+}
+
+function formatParameters(key: string, value: unknown): string {
+  // If date, format as ISO string
+  if (typeof value === 'object' && value instanceof Date) {
+    return `Date(${value.toISOString()})`;
+  }
+
+  // If ObjectId, format as string
+  if (ObjectId.isValid(value) || isObjectId(value)) {
+    return `ObjectId(${value})`;
+  }
+
+  return value as string;
+}
+
 // This function is used to debug log. Only exists in development mode.
-export const debug = (
-  name?: string,
-  method?: string,
-  parameters?: object,
-  ms?: number,
-): void => {
-  // eslint-disable-next-line no-console
-  console.debug(
-    `${cc.yellow(name)} ` +
-      `${ms !== undefined && ms < 10 ? cc.blue(method) : cc.green(method)} ` +
-      `${ms !== undefined && cc.gray(`(${ms}ms) `)}${JSON.stringify(
-        parameters,
-      )}`,
-  );
+export const debug = ({
+  name,
+  method,
+  status,
+  parameters,
+  ms,
+}: DebugParams): void => {
+  const color =
+    status === 'SUCCESS'
+      ? ms !== undefined && ms < 10
+        ? cc.green
+        : cc.blue
+      : cc.gray;
+
+  if (status === 'START') {
+    // eslint-disable-next-line no-console
+    console.debug(
+      `---------> ${cc.yellow(name)} ${method} ` +
+        `\n ${JSON.stringify(parameters, formatParameters, 2)} \n`,
+    );
+  } else {
+    // eslint-disable-next-line no-console
+    console.debug(
+      `${color(`${status}: ${ms}ms `)}
+    
+    ------------------------------
+    `,
+    );
+  }
 };
 
 // This function is used to error log. Only exists in development mode.

@@ -1,11 +1,40 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es2019",
+    // Required for legacy decorators (most commonly used)
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    
+    // Target ES2020 or higher for better decorator support
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    
+    // Module system
+    "module": "commonjs", // or "esnext" if using modern bundlers
+    "moduleResolution": "node",
+    
+    // Strict type checking (recommended)
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    
+    // Output settings
+    "outDir": "./dist",
+    "rootDir": "./src",
     "declaration": true,
-    "outDir": "./dist"
+    "sourceMap": true,
+    
+    // ESNext features
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
   ]
 }

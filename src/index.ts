@@ -1,7 +1,7 @@
 import { type Document } from 'mongodb';
 
-import { Options } from './BaseWrapper';
-import MongoDriverWrapper from './MongoDriverWrapper';
+import MongoWrapper from './MongoWrapper';
+import { Options } from './types';
 
 export { isObjectId, objectIdToString, stringToObjectId } from './helpers';
 
@@ -18,7 +18,7 @@ const createDb =
   <T extends Models>(options: Omit<Options, 'collection'>) =>
   <K extends keyof T>(collection: K) => {
     const ctx: Options = { ...options, collection: collection as string };
-    return new MongoDriverWrapper<T[K]>(ctx);
+    return new MongoWrapper<T[K]>(ctx);
   };
 
 export default createDb;
