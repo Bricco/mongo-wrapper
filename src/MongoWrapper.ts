@@ -131,16 +131,6 @@ export default class MongoWrapper<T extends Document = Document> {
     let response: R;
     const time = performance.now();
 
-    // // Pre-operation logging
-    if (this.options.debug) {
-      debug({
-        name: this.options.collection,
-        method,
-        status: 'START',
-        parameters: { args, options },
-      });
-    }
-
     try {
       if (options?.cache === false || !this.cache || isMutation) {
         response = await operation();

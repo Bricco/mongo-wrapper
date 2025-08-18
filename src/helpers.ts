@@ -47,26 +47,13 @@ export const debug = ({
   parameters,
   ms,
 }: DebugParams): void => {
-  const color =
-    status === 'SUCCESS'
-      ? ms !== undefined && ms < 10
-        ? cc.green
-        : cc.blue
-      : cc.gray;
+  const color = ms !== undefined && ms < 10 ? cc.green : cc.blue;
 
-  if (status === 'START') {
+  if (status === 'SUCCESS') {
     // eslint-disable-next-line no-console
     console.debug(
-      `---------> ${cc.yellow(name)} ${method} ` +
+      `---------> ${color(name)} ${method} ${ms}ms` +
         `\n ${EJSON.stringify(parameters, null, 2)} \n`,
-    );
-  } else {
-    // eslint-disable-next-line no-console
-    console.debug(
-      `${color(`${status}: ${ms}ms `)}
-    
-    ------------------------------
-    `,
     );
   }
 };
