@@ -4,7 +4,7 @@ import type { Sort } from 'mongodb';
 // workaround is to force cjs version with require
 // https://github.com/vercel/next.js/issues/54282
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { ObjectId } = require('bson');
+const { ObjectId, EJSON } = require('bson');
 
 export function getSort(sort?: string): Sort | undefined {
   if (!sort) {
@@ -39,20 +39,6 @@ interface DebugParams {
   ms?: number;
 }
 
-function formatParameters(key: string, value: unknown): string {
-  // If date, format as ISO string
-  if (typeof value === 'object' && value instanceof Date) {
-    return `Date(${value.toISOString()})`;
-  }
-
-  // If ObjectId, format as string
-  if (ObjectId.isValid(value) || isObjectId(value)) {
-    return `ObjectId(${value})`;
-  }
-
-  return value as string;
-}
-
 // This function is used to debug log. Only exists in development mode.
 export const debug = ({
   name,
@@ -72,7 +58,7 @@ export const debug = ({
     // eslint-disable-next-line no-console
     console.debug(
       `---------> ${cc.yellow(name)} ${method} ` +
-        `\n ${JSON.stringify(parameters, formatParameters, 2)} \n`,
+        `\n ${JSON.stringify(EJSON.stringify(parameters), null, 2)} \n`,
     );
   } else {
     // eslint-disable-next-line no-console
