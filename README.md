@@ -15,14 +15,13 @@ yarn add @bricco/mongo-wrapper
 ## Example
 
 ```js
-import createDb from '@bricco/mongo-wrapper'
+import createDb from '@bricco/mongo-wrapper';
+import { unstable_cache as cache } from 'next/cache';
 
 const db = createDb({
-	apiKey: 'XXXXXXXX',
-	apiUrl: 'https://data.mongodb-api.com/app/data-abc123/endpoint/data/v1',
-	dataSource: 'myCluser',
 	database: 'myDatabase',
 	connectionString: 'mongodb+srv://user:<PWD>@myCluser.apc123.mongodb.net',
+	cache: cache,
 })
 
 const car = await db('mycollection').findOne({ type: 'car' })

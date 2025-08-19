@@ -10,14 +10,14 @@ __metadata:
   resolution: "@bricco/mongo-wrapper@workspace:."
   dependencies:
     "@types/mongodb": "npm:^4.0.7"
-    "@types/node": "npm:^22.12.0"
+    "@types/node": "npm:^22.17.2"
     "@typescript-eslint/eslint-plugin": "npm:^6.21.0"
     "@typescript-eslint/parser": "npm:^6.21.0"
     eslint: "npm:^8.57.1"
     eslint-config-prettier: "npm:^9.1.0"
     eslint-plugin-prettier: "npm:^5.2.1"
     eslint-plugin-simple-import-sort: "npm:^10.0.0"
-    mongodb: "npm:^6.12.0"
+    mongodb: "npm:^6.18.0"
     prettier: "npm:^3.4.2"
     typescript: "npm:^5.7.2"
   peerDependencies:
@@ -151,12 +151,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.12.0":
-  version: 22.12.0
-  resolution: "@types/node@npm:22.12.0"
+"@types/node@npm:^22.17.2":
+  version: 22.17.2
+  resolution: "@types/node@npm:22.17.2"
   dependencies:
-    undici-types: "npm:~6.20.0"
-  checksum: 10/aac2b6f6a845ec3540c3d979b3150efe3162165bfda953af10b579df2d1cc4f5c48506922bf6bf661a2e5a7ebb571c5729bf1f9f12488a810bb1a5fa9522ef9d
+    undici-types: "npm:~6.21.0"
+  checksum: 10/b830746c65e014d7d47102ab2f24ec74bdb60156b9b75af42e75d81375f211904347125c00543b5fd7119223b3157726bc9814619205571c0a0afd6ce3c43abb
   languageName: node
   linkType: hard
 
@@ -412,6 +412,13 @@ __metadata:
   version: 6.10.1
   resolution: "bson@npm:6.10.1"
   checksum: 10/7b6d2a4c877bbe27d9e7fa0cd31e6b446ba08c5d70927403a6d42abf6e354fd12e79daf562fa5cc36e85cb8e701edc2ebdc2381c75c2376dde0f5e8d7ee3fd1b
+  languageName: node
+  linkType: hard
+
+"bson@npm:^6.10.4":
+  version: 6.10.4
+  resolution: "bson@npm:6.10.4"
+  checksum: 10/8a79a452219a13898358a5abc93e32bc3805236334f962661da121ce15bd5cade27718ba3310ee2a143ff508489b08467eed172ecb2a658cb8d2e94fdb76b215
   languageName: node
   linkType: hard
 
@@ -1027,7 +1034,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mongodb@npm:*, mongodb@npm:^6.12.0":
+"mongodb@npm:*":
   version: 6.12.0
   resolution: "mongodb@npm:6.12.0"
   dependencies:
@@ -1058,6 +1065,40 @@ __metadata:
     socks:
       optional: true
   checksum: 10/482c00f12ddc87a48a6e0d1e0f0d7cda7b4e3e95b016dea06e052cfe0cdbca0064ff78646440f6312f8030eb193d114dc4470ebe89ba1864638e322a003d65e3
+  languageName: node
+  linkType: hard
+
+"mongodb@npm:^6.18.0":
+  version: 6.18.0
+  resolution: "mongodb@npm:6.18.0"
+  dependencies:
+    "@mongodb-js/saslprep": "npm:^1.1.9"
+    bson: "npm:^6.10.4"
+    mongodb-connection-string-url: "npm:^3.0.0"
+  peerDependencies:
+    "@aws-sdk/credential-providers": ^3.188.0
+    "@mongodb-js/zstd": ^1.1.0 || ^2.0.0
+    gcp-metadata: ^5.2.0
+    kerberos: ^2.0.1
+    mongodb-client-encryption: ">=6.0.0 <7"
+    snappy: ^7.2.2
+    socks: ^2.7.1
+  peerDependenciesMeta:
+    "@aws-sdk/credential-providers":
+      optional: true
+    "@mongodb-js/zstd":
+      optional: true
+    gcp-metadata:
+      optional: true
+    kerberos:
+      optional: true
+    mongodb-client-encryption:
+      optional: true
+    snappy:
+      optional: true
+    socks:
+      optional: true
+  checksum: 10/559bfe87bb9a4945d81380c31cc89730c4a4c806a2e6ed06086dcacabd1caee32f711427abf93627b649f189e9464b67318ba65baccc07670bb30bac74dab933
   languageName: node
   linkType: hard
 
@@ -1386,10 +1427,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~6.20.0":
-  version: 6.20.0
-  resolution: "undici-types@npm:6.20.0"
-  checksum: 10/583ac7bbf4ff69931d3985f4762cde2690bb607844c16a5e2fbb92ed312fe4fa1b365e953032d469fa28ba8b224e88a595f0b10a449332f83fa77c695e567dbe
+"undici-types@npm:~6.21.0":
+  version: 6.21.0
+  resolution: "undici-types@npm:6.21.0"
+  checksum: 10/ec8f41aa4359d50f9b59fa61fe3efce3477cc681908c8f84354d8567bb3701fafdddf36ef6bff307024d3feb42c837cf6f670314ba37fc8145e219560e473d14
   languageName: node
   linkType: hard
 

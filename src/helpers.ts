@@ -4,7 +4,7 @@ import type { Sort } from 'mongodb';
 // workaround is to force cjs version with require
 // https://github.com/vercel/next.js/issues/54282
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { ObjectId } = require('bson');
+const { ObjectId, EJSON } = require('bson');
 
 export function getSort(sort?: string): Sort | undefined {
   if (!sort) {
@@ -31,21 +31,31 @@ const cc = {
     text ? `\x1b[31m${text}\x1b[0m` : undefined,
 };
 
+interface DebugParams {
+  name?: string;
+  method?: string;
+  status?: 'SUCCESS' | 'START';
+  parameters?: object;
+  ms?: number;
+}
+
 // This function is used to debug log. Only exists in development mode.
-export const debug = (
-  name?: string,
-  method?: string,
-  parameters?: object,
-  ms?: number,
-): void => {
-  // eslint-disable-next-line no-console
-  console.debug(
-    `${cc.yellow(name)} ` +
-      `${ms !== undefined && ms < 10 ? cc.blue(method) : cc.green(method)} ` +
-      `${ms !== undefined && cc.gray(`(${ms}ms) `)}${JSON.stringify(
-        parameters,
-      )}`,
-  );
+export const debug = ({
+  name,
+  method,
+  status,
+  parameters,
+  ms,
+}: DebugParams): void => {
+  const color = ms !== undefined && ms < 10 ? cc.green : cc.blue;
+
+  if (status === 'SUCCESS') {
+    // eslint-disable-next-line no-console
+    console.debug(
+      `---------> ${color(name)} ${method} ${ms}ms` +
+        `\n ${EJSON.stringify(parameters, null, 2)} \n`,
+    );
+  }
 };
 
 // This function is used to error log. Only exists in development mode.
