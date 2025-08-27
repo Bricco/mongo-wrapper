@@ -54,12 +54,12 @@ const db = createDb({
 	client,
 	cache: cache,
 	onMutation: async ({ collection }) => {
-    try {
-      revalidateTag(collection);
-    } catch {
-      // Empty
-    }
-  },
+		try {
+		revalidateTag(collection);
+		} catch {
+		// Empty
+		}
+	},
 })
 
 const car = await db('mycollection').findOne({ type: 'car' })
