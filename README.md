@@ -28,7 +28,7 @@ yarn add @bricco/mongo-wrapper
 
 ## Example
 
-```js
+```ts
 import { MongoClient } from 'mongodb'
 import createDb from '@bricco/mongo-wrapper';
 import { unstable_cache as cache, revalidateTag } from 'next/cache';
