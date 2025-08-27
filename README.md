@@ -60,11 +60,3 @@ const car = await db('mycollection').findOne({ type: 'car' }, { cache: false })
 // To manually revalidate the cache
 revalidateTags('mycollection')
 ```
-
-## Advanced Features
-
-- **Automatic ObjectId Conversion**: All ObjectIds are converted to strings automatically
-- **Debug Logging**: Development mode includes colored console output with query timing
-- **Cache Control**: Fine-grained control over caching behavior per operation
-- **Mutation Tracking**: Automatic cache invalidation and mutation logging
-- **Flexible Configuration**: Support for custom hooks and validation rules
