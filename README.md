@@ -31,7 +31,7 @@ yarn add @bricco/mongo-wrapper
 ```js
 import { MongoClient } from 'mongodb'
 import createDb from '@bricco/mongo-wrapper';
-import { unstable_cache as cache } from 'next/cache';
+import { unstable_cache as cache, revalidateTag } from 'next/cache';
 
 // Important! MongoClient must be a singleton and only instantiated once.
 // Never do client.close() manually, or no new connections will be opened.
@@ -48,6 +48,13 @@ const db = createDb({
 	database: 'myDatabase',
 	client,
 	cache: cache,
+	onMutation: async ({ collection }) => {
+    try {
+      revalidateTag(collection);
+    } catch {
+      // Empty
+    }
+  },
 })
 
 const car = await db('mycollection').findOne({ type: 'car' })
