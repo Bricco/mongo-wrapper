@@ -1,10 +1,12 @@
+import { MongoClient } from 'mongodb';
+
 export type QueryOptions = {
   cache?: boolean;
 };
 
 export type UpdateOptions = {
-  upsert?: boolean;
   skipSetOnUpdate?: boolean;
+  upsert?: boolean;
 };
 
 export type CacheFunction = <T>(
@@ -14,22 +16,22 @@ export type CacheFunction = <T>(
 ) => () => Promise<T>;
 
 export interface Options {
-  setOnUpdate?: (
-    collection: string,
-    update: object,
-  ) => Promise<object | void | null>;
+  cache?: CacheFunction;
+  client: MongoClient;
+  collection: string;
+  database: string;
+  debug?: boolean;
+  onMutation?: (props: {
+    action: string;
+    collection: string;
+  }) => void | Promise<void>;
   setOnInsert?: (
     collection: string,
     update: object,
   ) => Promise<object | void | null>;
-  collection: string;
-  database: string;
-  connectionString: string;
-  debug?: boolean;
-  cache?: CacheFunction;
-  onMutation?: (props: {
-    collection: string;
-    action: string;
-  }) => void | Promise<void>;
+  setOnUpdate?: (
+    collection: string,
+    update: object,
+  ) => Promise<object | void | null>;
   shouldRevalidate?: (tag: string) => boolean | Promise<boolean>;
 }

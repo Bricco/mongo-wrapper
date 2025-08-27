@@ -4,25 +4,30 @@ import type {
   BulkWriteOptions,
   BulkWriteResult,
   Collection,
-  Db,
   Document,
   Filter,
   FindOptions,
   InferIdType,
+  MongoClient,
   OptionalUnlessRequiredId,
 } from 'mongodb';
 
 import { debug, objectIdToString, stringToObjectId } from './helpers';
-import { CacheFunction, Options, QueryOptions, UpdateOptions } from './types';
+import type {
+  CacheFunction,
+  Options,
+  QueryOptions,
+  UpdateOptions,
+} from './types';
 
 export default class MongoWrapper<T extends Document = Document> {
-  private connectionPromise: Promise<Db> | null = null;
-
   protected options: Options;
   protected cache?: CacheFunction;
+  protected client: MongoClient;
 
   constructor(options: Options) {
     this.options = options;
+    this.client = options.client;
     this.cache = options.cache;
   }
 
@@ -127,6 +132,7 @@ export default class MongoWrapper<T extends Document = Document> {
     args: unknown[],
     options?: { cache?: boolean },
     isMutation: boolean = false,
+    retry: boolean = false,
   ): Promise<R> {
     let response: R;
     const time = performance.now();
@@ -158,59 +164,54 @@ export default class MongoWrapper<T extends Document = Document> {
       // Success logging
       if (this.options.debug) {
         debug({
-          name: this.options.collection,
           method,
-          status: 'SUCCESS',
+          ms: performance.now() - time,
+          name: this.options.collection,
           parameters: {
             args,
             options,
           },
-          ms: performance.now() - time,
+          status: 'SUCCESS',
         });
       }
 
       return response;
     } catch (error) {
+      // Retry the operation
+      if (!retry) {
+        return this.executeWithCacheAndLogging(
+          method,
+          operation,
+          args,
+          options,
+          isMutation,
+          true,
+        );
+      }
+
       // Error logging
       if (this.options.debug) {
         this.onError({
           action: method,
-          parameters: { args, options, error },
+          parameters: { args, error, options },
         })(error as Error);
       }
+
       throw error;
     }
   }
 
-  private getConnectionUrl(): string {
-    const url = new URL(this.options.connectionString);
-    url.searchParams.set('retryWrites', 'true');
-    url.searchParams.set('w', 'majority');
-    return url.toString();
-  }
-
   async db(): Promise<Collection<T>> {
-    if (!this.connectionPromise) {
-      if (process.env.NEXT_RUNTIME !== 'edge') {
-        this.connectionPromise = new Promise<Db>(resolve => {
-          import('mongodb').then(async ({ MongoClient }) => {
-            const client = await MongoClient.connect(this.getConnectionUrl());
-            resolve(client.db(this.options.database));
-          });
-        });
-      } else {
-        throw new Error('MongoWrapper is not supported in edge runtime');
-      }
-    }
-
-    return (await this.connectionPromise).collection(this.options.collection);
+    return this.client
+      .db(this.options.database)
+      .collection(this.options.collection);
   }
 
   protected onMutation = async (action: string): Promise<void> => {
     if (this.options.onMutation) {
       await this.options.onMutation({
-        collection: this.options.collection,
         action,
+        collection: this.options.collection,
       });
     }
   };
@@ -371,10 +372,10 @@ export default class MongoWrapper<T extends Document = Document> {
     update: object,
     options: {
       projection?: FindOptions<T>['projection'];
-      sort?: FindOptions<T>['sort'];
-      upsert?: boolean;
       returnDocument?: 'before' | 'after';
       skipSetOnUpdate?: boolean;
+      sort?: FindOptions<T>['sort'];
+      upsert?: boolean;
     } & QueryOptions = {},
   ): Promise<R | null> {
     const { skipSetOnUpdate = false, ..._options } = options;
@@ -390,7 +391,7 @@ export default class MongoWrapper<T extends Document = Document> {
       .catch(
         this.onError({
           action: 'findOneAndUpdate',
-          parameters: { filter, update, options },
+          parameters: { filter, options, update },
         }),
       )
       .then(result => (result ? this.ots(result.value) : null));

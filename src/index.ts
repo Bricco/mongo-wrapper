@@ -1,4 +1,4 @@
-import { type Document } from 'mongodb';
+import type { Document } from 'mongodb';
 
 import MongoWrapper from './MongoWrapper';
 import { Options } from './types';
@@ -11,13 +11,16 @@ type Models = {
 
 export type FacetResponse<T> = {
   data: T[];
-  metadata: { count: number; total: number; limit: number; page: number };
+  metadata: { count: number; limit: number; page: number; total: number };
 };
 
 const createDb =
   <T extends Models>(options: Omit<Options, 'collection'>) =>
   <K extends keyof T>(collection: K) => {
-    const ctx: Options = { ...options, collection: collection as string };
+    const ctx: Options = {
+      ...options,
+      collection: collection as string,
+    };
     return new MongoWrapper<T[K]>(ctx);
   };
 
