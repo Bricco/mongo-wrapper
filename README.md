@@ -33,9 +33,14 @@ import { MongoClient } from 'mongodb'
 import createDb from '@bricco/mongo-wrapper';
 import { unstable_cache as cache, revalidateTag } from 'next/cache';
 
+type MyCollection {
+	mycollection: MyCollection1,
+	mycollection2: MyCollection2
+}
+
 // Important! MongoClient must be a singleton and only instantiated once.
 // Never do client.close() manually, or no new connections will be opened.
-const client = new MongoClient('mongodb://localhost:27017', {
+const client = new MongoClient<MyCollection>('mongodb://localhost:27017', {
 	maxIdleTimeMS: 60000, // Set to the same as maxDuration 
 	maxPoolSize: 10, // the default is 100, 10 is better suited for serverless
 	retryWrites: true,
