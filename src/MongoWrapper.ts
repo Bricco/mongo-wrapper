@@ -3,6 +3,7 @@ import type {
   AnyBulkWriteOperation,
   BulkWriteOptions,
   BulkWriteResult,
+  ClientSession,
   Collection,
   Document,
   Filter,
@@ -24,11 +25,13 @@ export default class MongoWrapper<T extends Document = Document> {
   protected options: Options;
   protected cache?: CacheFunction;
   protected client: MongoClient;
+  protected session?: ClientSession;
 
-  constructor(options: Options) {
+  constructor(options: Options, session?: ClientSession) {
     this.options = options;
     this.client = options.client;
     this.cache = options.cache;
+    this.session = session;
   }
 
   protected async onInsert<T extends Document>(document: T): Promise<T> {
@@ -138,7 +141,12 @@ export default class MongoWrapper<T extends Document = Document> {
     const time = performance.now();
 
     try {
-      if (options?.cache === false || !this.cache || isMutation) {
+      if (
+        options?.cache === false ||
+        !this.cache ||
+        isMutation ||
+        !!this.session
+      ) {
         response = await operation();
       } else {
         const ejson = await this.cache(
@@ -223,7 +231,10 @@ export default class MongoWrapper<T extends Document = Document> {
     options: { projection?: FindOptions<T>['projection'] } & QueryOptions = {},
   ): Promise<R | null> {
     return (await this.db())
-      .findOne<R>(this.sto(filter), { projection: options.projection })
+      .findOne<R>(this.sto(filter), {
+        projection: options.projection,
+        session: this.session,
+      })
       .then(result => this.ots(result))
       .catch(
         this.onError({
@@ -241,7 +252,10 @@ export default class MongoWrapper<T extends Document = Document> {
   ): Promise<R[]> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { cache, ...opts } = options;
-    const cursor = (await this.db()).find<R>(this.sto(filter), opts);
+    const cursor = (await this.db()).find<R>(this.sto(filter), {
+      ...opts,
+      session: this.session,
+    });
     const result = await cursor
       .toArray()
       .catch(this.onError({ action: 'find', parameters: { filter, options } }));
@@ -268,7 +282,9 @@ export default class MongoWrapper<T extends Document = Document> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     options: QueryOptions = {},
   ): Promise<R[]> {
-    const cursor = (await this.db()).aggregate<R>(this.sto(pipeline));
+    const cursor = (await this.db()).aggregate<R>(this.sto(pipeline), {
+      session: this.session,
+    });
     const result = await cursor
       .toArray()
       .catch(this.onError({ action: 'aggregate', parameters: { pipeline } }));
@@ -283,7 +299,7 @@ export default class MongoWrapper<T extends Document = Document> {
     options: QueryOptions = {},
   ): Promise<number> {
     return (await this.db())
-      .countDocuments(this.sto(filter))
+      .countDocuments(this.sto(filter), { session: this.session })
       .catch(
         this.onError({ action: 'count', parameters: { filter, options } }),
       );
@@ -295,7 +311,9 @@ export default class MongoWrapper<T extends Document = Document> {
     document: OptionalUnlessRequiredId<T>,
   ): Promise<{ insertedId: InferIdType<T> }> {
     return (await this.db())
-      .insertOne(this.sto(await this.onInsert(document)))
+      .insertOne(this.sto(await this.onInsert(document)), {
+        session: this.session,
+      })
       .catch(this.onError({ action: 'insertOne', parameters: { document } }))
       .then(result => this.ots(result));
   }
@@ -306,7 +324,7 @@ export default class MongoWrapper<T extends Document = Document> {
   ): Promise<{ insertedIds: InferIdType<T>[] }> {
     const docs = await Promise.all(documents.map(doc => this.onInsert(doc)));
     return (await this.db())
-      .insertMany(this.sto(docs))
+      .insertMany(this.sto(docs), { session: this.session })
       .catch(this.onError({ action: 'insertMany', parameters: { documents } }))
       .then(({ insertedIds }) => ({ insertedIds: Object.values(insertedIds) }))
       .then(result => this.ots(result));
@@ -322,7 +340,7 @@ export default class MongoWrapper<T extends Document = Document> {
       .updateOne(
         this.sto(filter),
         this.sto(await this.onUpdate(update, skipSetOnUpdate)),
-        { upsert },
+        { upsert, session: this.session },
       )
       .catch(
         this.onError({ action: 'updateOne', parameters: { filter, update } }),
@@ -340,7 +358,7 @@ export default class MongoWrapper<T extends Document = Document> {
       .updateMany(
         this.sto(filter),
         this.sto(await this.onUpdate(update, skipSetOnUpdate)),
-        { upsert },
+        { upsert, session: this.session },
       )
       .catch(
         this.onError({ action: 'updateMany', parameters: { filter, update } }),
@@ -351,7 +369,7 @@ export default class MongoWrapper<T extends Document = Document> {
   @MongoWrapper.withCacheAndLogging(true)
   public async deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }> {
     return (await this.db())
-      .deleteOne(this.sto(filter))
+      .deleteOne(this.sto(filter), { session: this.session })
       .catch(this.onError({ action: 'deleteOne', parameters: { filter } }))
       .then(result => this.ots(result));
   }
@@ -361,7 +379,7 @@ export default class MongoWrapper<T extends Document = Document> {
     filter: Filter<T>,
   ): Promise<{ deletedCount: number }> {
     return (await this.db())
-      .deleteMany(this.sto(filter))
+      .deleteMany(this.sto(filter), { session: this.session })
       .catch(this.onError({ action: 'deleteMany', parameters: { filter } }))
       .then(result => this.ots(result));
   }
@@ -386,6 +404,7 @@ export default class MongoWrapper<T extends Document = Document> {
         {
           ..._options,
           returnDocument: _options.returnDocument || 'after',
+          session: this.session,
         },
       )
       .catch(
@@ -444,7 +463,7 @@ export default class MongoWrapper<T extends Document = Document> {
             }),
           ),
         ),
-        opts,
+        { ...opts, session: this.session },
       )
       .catch(
         this.onError({
@@ -459,7 +478,9 @@ export default class MongoWrapper<T extends Document = Document> {
   public async *cursor<R extends Document = Document>(
     pipeline: Document[],
   ): AsyncGenerator<R> {
-    const cursor = (await this.db()).aggregate<R>(this.sto(pipeline));
+    const cursor = (await this.db()).aggregate<R>(this.sto(pipeline), {
+      session: this.session,
+    });
 
     try {
       for await (const doc of cursor) {
@@ -478,7 +499,10 @@ export default class MongoWrapper<T extends Document = Document> {
     filter: Filter<T>,
     options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
   ): AsyncGenerator<R> {
-    const cursor = (await this.db()).find<R>(this.sto(filter), options);
+    const cursor = (await this.db()).find<R>(this.sto(filter), {
+      ...options,
+      session: this.session,
+    });
 
     try {
       for await (const doc of cursor) {
@@ -490,6 +514,28 @@ export default class MongoWrapper<T extends Document = Document> {
       );
     } finally {
       await cursor.close();
+    }
+  }
+
+  public async transaction(
+    fn: (db: MongoWrapper<T>) => Promise<void>,
+  ): Promise<void> {
+    const session = await this.client.startSession();
+
+    try {
+      await session.withTransaction(async () => {
+        await fn(
+          new MongoWrapper<T>(
+            {
+              ...this.options,
+              client: this.client,
+            },
+            session,
+          ),
+        );
+      });
+    } finally {
+      await session.endSession();
     }
   }
 
@@ -514,15 +560,21 @@ export default class MongoWrapper<T extends Document = Document> {
     // Do not forward the real error
     // That might expose sensitive information
 
+    const metadata = {
+      collection: this.options.collection,
+      database: this.options.database,
+      ...meta,
+    };
+
     return error => {
-      console.error('MongoDB error:', {
-        error,
-        meta: {
-          collection: this.options.collection,
-          database: this.options.database,
-          ...meta,
-        },
-      });
+      if (this.options.onError) {
+        this.options.onError(error, metadata);
+      } else {
+        console.error('MongoDB error:', {
+          error,
+          meta: metadata,
+        });
+      }
 
       throw new Error(
         'A database related error occurred. See the logs for detailed information.',
