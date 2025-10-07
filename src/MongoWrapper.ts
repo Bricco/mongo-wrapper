@@ -11,6 +11,7 @@ import {
   type InferIdType,
   type MongoClient,
   MongoNetworkError,
+  MongoNotConnectedError,
   MongoServerClosedError,
   MongoServerSelectionError,
   MongoTopologyClosedError,
@@ -193,7 +194,8 @@ export default class MongoWrapper<T extends Document = Document> {
         error instanceof MongoNetworkError ||
         error instanceof MongoServerSelectionError ||
         error instanceof MongoTopologyClosedError ||
-        error instanceof MongoServerClosedError;
+        error instanceof MongoServerClosedError ||
+        error instanceof MongoNotConnectedError;
 
       // Retry the operation
       if (!retry && isRetryable) {
