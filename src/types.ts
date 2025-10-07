@@ -17,6 +17,8 @@ export type CacheFunction = <T>(
 
 export interface Options {
   cache?: CacheFunction;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onError?: (error: Error, metadata: Record<string, any>) => void;
   client: MongoClient;
   collection: string;
   database: string;
