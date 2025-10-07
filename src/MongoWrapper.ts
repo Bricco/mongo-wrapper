@@ -1,16 +1,20 @@
 import { EJSON } from 'bson';
-import type {
-  AnyBulkWriteOperation,
-  BulkWriteOptions,
-  BulkWriteResult,
-  ClientSession,
-  Collection,
-  Document,
-  Filter,
-  FindOptions,
-  InferIdType,
-  MongoClient,
-  OptionalUnlessRequiredId,
+import {
+  type AnyBulkWriteOperation,
+  type BulkWriteOptions,
+  type BulkWriteResult,
+  type ClientSession,
+  type Collection,
+  type Document,
+  type Filter,
+  type FindOptions,
+  type InferIdType,
+  type MongoClient,
+  MongoNetworkError,
+  MongoServerClosedError,
+  MongoServerSelectionError,
+  MongoTopologyClosedError,
+  type OptionalUnlessRequiredId,
 } from 'mongodb';
 
 import { debug, objectIdToString, stringToObjectId } from './helpers';
@@ -185,8 +189,23 @@ export default class MongoWrapper<T extends Document = Document> {
 
       return response;
     } catch (error) {
+      const isRetryable =
+        error instanceof MongoNetworkError ||
+        error instanceof MongoServerSelectionError ||
+        error instanceof MongoTopologyClosedError ||
+        error instanceof MongoServerClosedError;
+
       // Retry the operation
-      if (!retry) {
+      if (!retry && isRetryable) {
+        await new Promise(res => setTimeout(res, 1000));
+        try {
+          await this.client.close();
+        } catch (closeError) {
+          // Ignore close errors
+        }
+
+        await this.client.connect();
+
         return this.executeWithCacheAndLogging(
           method,
           operation,
