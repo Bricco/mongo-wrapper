@@ -10,11 +10,6 @@ import {
   type FindOptions,
   type InferIdType,
   type MongoClient,
-  MongoNetworkError,
-  MongoNotConnectedError,
-  MongoServerClosedError,
-  MongoServerSelectionError,
-  MongoTopologyClosedError,
   type OptionalUnlessRequiredId,
 } from 'mongodb';
 
@@ -190,15 +185,28 @@ export default class MongoWrapper<T extends Document = Document> {
 
       return response;
     } catch (error) {
+      const retryableErrors = [
+        'MongoNetworkError',
+        'MongoServerSelectionError',
+        'MongoNotConnectedError',
+        'MongoClientClosedError',
+        'MongoSystemError',
+        'MongoServerClosedError',
+        'MongoPoolClosedError',
+        'MongoNetworkTimeoutError',
+        'MongoExpiredSessionError',
+        'MongoTopologyClosedError',
+      ];
+
       const isRetryable =
-        error instanceof MongoNetworkError ||
-        error instanceof MongoServerSelectionError ||
-        error instanceof MongoTopologyClosedError ||
-        error instanceof MongoServerClosedError ||
-        error instanceof MongoNotConnectedError;
+        error instanceof Error && retryableErrors.includes(error.name);
 
       // Retry the operation
       if (!retry && isRetryable) {
+        console.info(
+          `Retrying MongoDB operation "${method}" due to error:`,
+          error.message,
+        );
         await new Promise(res => setTimeout(res, 1000));
         try {
           await this.client.close();
@@ -219,12 +227,10 @@ export default class MongoWrapper<T extends Document = Document> {
       }
 
       // Error logging
-      if (this.options.debug) {
-        this.onError({
-          action: method,
-          parameters: { args, error, options },
-        })(error as Error);
-      }
+      this.onError({
+        action: method,
+        parameters: { args, options },
+      })(error as Error);
 
       throw error;
     }
@@ -256,13 +262,7 @@ export default class MongoWrapper<T extends Document = Document> {
         projection: options.projection,
         session: this.session,
       })
-      .then(result => this.ots(result))
-      .catch(
-        this.onError({
-          action: 'findOne',
-          parameters: { filter, options },
-        }),
-      );
+      .then(result => this.ots(result));
   }
 
   @MongoWrapper.withCacheAndLogging(false)
@@ -277,9 +277,7 @@ export default class MongoWrapper<T extends Document = Document> {
       ...opts,
       session: this.session,
     });
-    const result = await cursor
-      .toArray()
-      .catch(this.onError({ action: 'find', parameters: { filter, options } }));
+    const result = await cursor.toArray();
 
     await cursor.close();
     return this.ots(result);
@@ -293,7 +291,6 @@ export default class MongoWrapper<T extends Document = Document> {
   ): Promise<R[]> {
     return (await this.db())
       .distinct(field)
-      .catch(this.onError({ action: 'distinct', parameters: { field } }))
       .then(result => this.ots(result) as R[]);
   }
 
@@ -306,9 +303,7 @@ export default class MongoWrapper<T extends Document = Document> {
     const cursor = (await this.db()).aggregate<R>(this.sto(pipeline), {
       session: this.session,
     });
-    const result = await cursor
-      .toArray()
-      .catch(this.onError({ action: 'aggregate', parameters: { pipeline } }));
+    const result = await cursor.toArray();
 
     await cursor.close();
     return this.ots(result);
@@ -317,13 +312,12 @@ export default class MongoWrapper<T extends Document = Document> {
   @MongoWrapper.withCacheAndLogging(false)
   public async count(
     filter: Filter<T> = {},
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     options: QueryOptions = {},
   ): Promise<number> {
-    return (await this.db())
-      .countDocuments(this.sto(filter), { session: this.session })
-      .catch(
-        this.onError({ action: 'count', parameters: { filter, options } }),
-      );
+    return (await this.db()).countDocuments(this.sto(filter), {
+      session: this.session,
+    });
   }
 
   // Mutation operations (non-cacheable, triggers onMutation)
@@ -335,7 +329,6 @@ export default class MongoWrapper<T extends Document = Document> {
       .insertOne(this.sto(await this.onInsert(document)), {
         session: this.session,
       })
-      .catch(this.onError({ action: 'insertOne', parameters: { document } }))
       .then(result => this.ots(result));
   }
 
@@ -346,7 +339,6 @@ export default class MongoWrapper<T extends Document = Document> {
     const docs = await Promise.all(documents.map(doc => this.onInsert(doc)));
     return (await this.db())
       .insertMany(this.sto(docs), { session: this.session })
-      .catch(this.onError({ action: 'insertMany', parameters: { documents } }))
       .then(({ insertedIds }) => ({ insertedIds: Object.values(insertedIds) }))
       .then(result => this.ots(result));
   }
@@ -363,9 +355,6 @@ export default class MongoWrapper<T extends Document = Document> {
         this.sto(await this.onUpdate(update, skipSetOnUpdate)),
         { upsert, session: this.session },
       )
-      .catch(
-        this.onError({ action: 'updateOne', parameters: { filter, update } }),
-      )
       .then(result => this.ots(result));
   }
 
@@ -381,9 +370,6 @@ export default class MongoWrapper<T extends Document = Document> {
         this.sto(await this.onUpdate(update, skipSetOnUpdate)),
         { upsert, session: this.session },
       )
-      .catch(
-        this.onError({ action: 'updateMany', parameters: { filter, update } }),
-      )
       .then(result => this.ots(result));
   }
 
@@ -391,7 +377,6 @@ export default class MongoWrapper<T extends Document = Document> {
   public async deleteOne(filter: Filter<T>): Promise<{ deletedCount: number }> {
     return (await this.db())
       .deleteOne(this.sto(filter), { session: this.session })
-      .catch(this.onError({ action: 'deleteOne', parameters: { filter } }))
       .then(result => this.ots(result));
   }
 
@@ -401,7 +386,6 @@ export default class MongoWrapper<T extends Document = Document> {
   ): Promise<{ deletedCount: number }> {
     return (await this.db())
       .deleteMany(this.sto(filter), { session: this.session })
-      .catch(this.onError({ action: 'deleteMany', parameters: { filter } }))
       .then(result => this.ots(result));
   }
 
@@ -427,12 +411,6 @@ export default class MongoWrapper<T extends Document = Document> {
           returnDocument: _options.returnDocument || 'after',
           session: this.session,
         },
-      )
-      .catch(
-        this.onError({
-          action: 'findOneAndUpdate',
-          parameters: { filter, options, update },
-        }),
       )
       .then(result => (result ? this.ots(result.value) : null));
   }
@@ -485,12 +463,6 @@ export default class MongoWrapper<T extends Document = Document> {
           ),
         ),
         { ...opts, session: this.session },
-      )
-      .catch(
-        this.onError({
-          action: 'bulkWrite',
-          parameters: { operations, options },
-        }),
       )
       .then(result => this.ots(result));
   }
