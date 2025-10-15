@@ -21,6 +21,8 @@ import type {
   UpdateOptions,
 } from './types';
 
+let isReconnecting: null | Promise<void> = null;
+
 export default class MongoWrapper<T extends Document = Document> {
   protected options: Options;
   protected cache?: CacheFunction;
@@ -129,6 +131,32 @@ export default class MongoWrapper<T extends Document = Document> {
     };
   }
 
+  private async reconnect(): Promise<void> {
+    if (isReconnecting) {
+      await isReconnecting;
+      return;
+    }
+
+    isReconnecting = (async () => {
+      try {
+        await this.client.close();
+      } catch (closeError) {
+        // Ignore close errors
+      }
+
+      // Wait a moment to avoid rapid reconnect loops
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      await this.client.connect();
+    })();
+
+    try {
+      await isReconnecting;
+    } finally {
+      isReconnecting = null;
+    }
+  }
+
   private async executeWithCacheAndLogging<R>(
     method: string,
     operation: () => Promise<R>,
@@ -207,14 +235,8 @@ export default class MongoWrapper<T extends Document = Document> {
           `Retrying MongoDB operation "${method}" due to error:`,
           error.message,
         );
-        await new Promise(res => setTimeout(res, 1000));
-        try {
-          await this.client.close();
-        } catch (closeError) {
-          // Ignore close errors
-        }
 
-        await this.client.connect();
+        await this.reconnect();
 
         return this.executeWithCacheAndLogging(
           method,
