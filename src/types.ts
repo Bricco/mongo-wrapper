@@ -23,6 +23,7 @@ export interface Options {
   collection: string;
   database: string;
   debug?: boolean;
+  disableTransactions?: boolean;
   onMutation?: (props: {
     action: string;
     collection: string;

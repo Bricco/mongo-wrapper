@@ -36,6 +36,13 @@ const DbFactory = <T extends Models>(
       throw new Error('Nested transactions are not supported');
     }
 
+    if (options.disableTransactions) {
+      console.warn(
+        'Transactions are disabled. Running operations without a transaction.',
+      );
+      return fn(db);
+    }
+
     const session = await options.client.startSession();
     await session.withTransaction(async () => {
       await fn(DbFactory<T>(options, session));
