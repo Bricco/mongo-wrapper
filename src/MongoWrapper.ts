@@ -21,9 +21,8 @@ import type {
   UpdateOptions,
 } from './types';
 
-let isReconnecting: null | Promise<void> = null;
-
 export default class MongoWrapper<T extends Document = Document> {
+  private static reconnectionPromises = new Map<MongoClient, Promise<void>>();
   protected options: Options;
   protected cache?: CacheFunction;
   protected client: MongoClient;
@@ -132,29 +131,89 @@ export default class MongoWrapper<T extends Document = Document> {
   }
 
   private async reconnect(): Promise<void> {
-    if (isReconnecting) {
-      await isReconnecting;
+    const existingReconnection = MongoWrapper.reconnectionPromises.get(
+      this.client,
+    );
+
+    if (existingReconnection) {
+      await existingReconnection;
       return;
     }
 
-    isReconnecting = (async () => {
-      try {
-        await this.client.close();
-      } catch (closeError) {
-        // Ignore close errors
-      }
+    const reconnectionPromise = this.performReconnect();
 
-      // Wait a moment to avoid rapid reconnect loops
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      await this.client.connect();
-    })();
+    MongoWrapper.reconnectionPromises.set(this.client, reconnectionPromise);
 
     try {
-      await isReconnecting;
+      await reconnectionPromise;
     } finally {
-      isReconnecting = null;
+      MongoWrapper.reconnectionPromises.delete(this.client);
     }
+  }
+
+  private async performReconnect(): Promise<void> {
+    const maxRetries = this.options.retry?.maxRetries ?? 3;
+    const initialDelay = this.options.retry?.initialDelayMs ?? 1000;
+    const maxDelay = this.options.retry?.maxDelayMs ?? 10000;
+    const backoffMultiplier = this.options.retry?.backoffMultiplier ?? 2;
+
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Try to close the client gracefully
+        try {
+          await this.client.close();
+        } catch (closeError) {
+          // Ignore close errors - client might already be closed
+        }
+
+        // Calculate delay with exponential backoff
+        if (attempt > 0) {
+          const delay = Math.min(
+            initialDelay * Math.pow(backoffMultiplier, attempt - 1),
+            maxDelay,
+          );
+
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        // Attempt to reconnect
+        await this.client.connect();
+
+        if (this.options.debug) {
+          debug({
+            method: 'reconnect',
+            name: this.options.collection,
+            status: 'SUCCESS',
+            parameters: {
+              attempt,
+              retriesUsed: attempt,
+            },
+          });
+        }
+
+        return; // Success!
+      } catch (error) {
+        lastError = error as Error;
+
+        if (attempt < maxRetries) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `MongoDB reconnection attempt ${attempt + 1}/${maxRetries + 1} failed:`,
+            error instanceof Error ? error.message : error,
+          );
+        }
+      }
+    }
+
+    // All retries exhausted
+    const errorMessage = `Failed to reconnect to MongoDB after ${maxRetries + 1} attempts`;
+    // eslint-disable-next-line no-console
+    console.error(errorMessage, lastError);
+    throw new Error(
+      `${errorMessage}: ${lastError?.message || 'Unknown error'}`,
+    );
   }
 
   private async executeWithCacheAndLogging<R>(
@@ -213,12 +272,12 @@ export default class MongoWrapper<T extends Document = Document> {
 
       return response;
     } catch (error) {
-      const retryableErrors = [
+      // Connection/infrastructure errors that warrant reconnection and retry
+      const connectionErrors = [
         'MongoNetworkError',
         'MongoServerSelectionError',
         'MongoNotConnectedError',
         'MongoClientClosedError',
-        'MongoSystemError',
         'MongoServerClosedError',
         'MongoPoolClosedError',
         'MongoNetworkTimeoutError',
@@ -226,14 +285,41 @@ export default class MongoWrapper<T extends Document = Document> {
         'MongoTopologyClosedError',
       ];
 
+      // Errors that should NEVER be retried (permanent failures)
+      const nonRetryableErrors = [
+        'MongoInvalidArgumentError', // Bad input from application code
+        'MongoAPIError', // API misuse
+        'MongoParseError', // Query syntax error
+        'MongoAuthenticationError', // Wrong credentials
+        'MongoMissingCredentialsError', // No credentials
+        'MongoCompatibilityError', // Version mismatch
+        'MongoCursorInExhaustedState', // Cursor already consumed
+      ];
+
+      const isConnectionError =
+        error instanceof Error && connectionErrors.includes(error.name);
+
+      const isPermanentError =
+        error instanceof Error && nonRetryableErrors.includes(error.name);
+
+      // Check if error has a code indicating a permanent failure
+      const isDuplicateKeyError =
+        error instanceof Error &&
+        'code' in error &&
+        (error.code === 11000 || error.code === 11001);
+
       const isRetryable =
-        error instanceof Error && retryableErrors.includes(error.name);
+        isConnectionError && !isPermanentError && !isDuplicateKeyError;
+
+      // Don't retry operations within a session - sessions become invalid after reconnection
+      const canRetry = !retry && isRetryable && !this.session;
 
       // Retry the operation
-      if (!retry && isRetryable) {
+      if (canRetry) {
+        // eslint-disable-next-line no-console
         console.info(
-          `Retrying MongoDB operation "${method}" due to error:`,
-          error.message,
+          `Retrying MongoDB operation "${method}" on collection "${this.options.collection}" due to ${error instanceof Error ? error.name : 'error'}:`,
+          error instanceof Error ? error.message : error,
         );
 
         await this.reconnect();

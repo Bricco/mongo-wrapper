@@ -34,7 +34,7 @@ const cc = {
 interface DebugParams {
   name?: string;
   method?: string;
-  status?: 'SUCCESS' | 'START';
+  status?: 'SUCCESS' | 'START' | 'INFO';
   parameters?: object;
   ms?: number;
 }
@@ -52,6 +52,14 @@ export const debug = ({
   if (status === 'SUCCESS') {
     // eslint-disable-next-line no-console
     console.debug(
+      `---------> ${color(name)} ${method} ${ms}ms` +
+        `\n ${EJSON.stringify(parameters, null, 2)} \n`,
+    );
+  }
+
+  if (status === 'INFO') {
+    // eslint-disable-next-line no-console
+    console.info(
       `---------> ${color(name)} ${method} ${ms}ms` +
         `\n ${EJSON.stringify(parameters, null, 2)} \n`,
     );
