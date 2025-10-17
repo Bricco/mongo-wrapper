@@ -1,12 +1,11 @@
-import { MongoClient } from 'mongodb';
+import { MongoClient, UpdateOptions as MongoUpdateOptions } from 'mongodb';
 
 export type QueryOptions = {
   cache?: boolean;
 };
 
-export type UpdateOptions = {
+export type UpdateOptions = MongoUpdateOptions & {
   skipSetOnUpdate?: boolean;
-  upsert?: boolean;
 };
 
 export type CacheFunction = <T>(

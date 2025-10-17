@@ -11,6 +11,7 @@ import {
   type InferIdType,
   type MongoClient,
   type OptionalUnlessRequiredId,
+  ReplaceOptions,
 } from 'mongodb';
 
 import { debug, objectIdToString, stringToObjectId } from './helpers';
@@ -455,13 +456,13 @@ export default class MongoWrapper<T extends Document = Document> {
   public async updateOne(
     filter: Filter<T>,
     update: object,
-    { skipSetOnUpdate = false, upsert = false }: UpdateOptions = {},
+    { skipSetOnUpdate = false, ...options }: UpdateOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return (await this.db())
       .updateOne(
         this.sto(filter),
         this.sto(await this.onUpdate(update, skipSetOnUpdate)),
-        { upsert, session: this.session },
+        { ...options, session: this.session },
       )
       .then(result => this.ots(result));
   }
@@ -470,13 +471,34 @@ export default class MongoWrapper<T extends Document = Document> {
   public async updateMany(
     filter: Filter<T>,
     update: object,
-    { skipSetOnUpdate = false, upsert = false }: UpdateOptions = {},
+    { skipSetOnUpdate = false, ...options }: UpdateOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return (await this.db())
       .updateMany(
         this.sto(filter),
         this.sto(await this.onUpdate(update, skipSetOnUpdate)),
-        { upsert, session: this.session },
+        { ...options, session: this.session },
+      )
+      .then(result => this.ots(result));
+  }
+
+  @MongoWrapper.withCacheAndLogging(true)
+  public async replaceOne(
+    filter: Filter<T>,
+    document: OptionalUnlessRequiredId<T>,
+    {
+      skipSetOnUpdate = false,
+      ...options
+    }: ReplaceOptions & { skipSetOnUpdate?: boolean } = {},
+  ): Promise<{ matchedCount: number; modifiedCount: number }> {
+    return (await this.db())
+      .replaceOne(
+        this.sto(filter),
+        this.sto(await this.onUpdate(document, skipSetOnUpdate)) as T,
+        {
+          ...options,
+          session: this.session,
+        },
       )
       .then(result => this.ots(result));
   }
@@ -520,7 +542,7 @@ export default class MongoWrapper<T extends Document = Document> {
           session: this.session,
         },
       )
-      .then(result => (result ? this.ots(result.value) : null));
+      .then(result => (result ? (this.ots(result) as unknown as R) : null));
   }
 
   @MongoWrapper.withCacheAndLogging(true)
