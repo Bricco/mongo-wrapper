@@ -604,8 +604,10 @@ export default class MongoWrapper<T extends Document = Document> {
   // These methods don't need caching/logging as they're streaming or utility methods
   public async *cursor<R extends Document = Document>(
     pipeline: Document[],
+    options: AggregateOptions = {},
   ): AsyncGenerator<R> {
     const cursor = (await this.db()).aggregate<R>(this.sto(pipeline), {
+      ...options,
       session: this.session,
     });
 
@@ -624,7 +626,7 @@ export default class MongoWrapper<T extends Document = Document> {
 
   public async *findCursor<R extends Document = T>(
     filter: Filter<T>,
-    options?: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'>,
+    options: FindOptions = {},
   ): AsyncGenerator<R> {
     const cursor = (await this.db()).find<R>(this.sto(filter), {
       ...options,
