@@ -1,10 +1,12 @@
 import { EJSON } from 'bson';
 import {
+  AggregateOptions,
   type AnyBulkWriteOperation,
   type BulkWriteOptions,
   type BulkWriteResult,
   type ClientSession,
   type Collection,
+  CountDocumentsOptions,
   type Document,
   type Filter,
   type FindOptions,
@@ -364,11 +366,13 @@ export default class MongoWrapper<T extends Document = Document> {
   @MongoWrapper.withCacheAndLogging(false)
   public async findOne<R extends Document = T>(
     filter: Filter<T>,
-    options: { projection?: FindOptions<T>['projection'] } & QueryOptions = {},
+    options: Omit<FindOptions, 'timeoutMode'> & QueryOptions = {},
   ): Promise<R | null> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { cache, ...opts } = options;
     return (await this.db())
       .findOne<R>(this.sto(filter), {
-        projection: options.projection,
+        ...opts,
         session: this.session,
       })
       .then(result => this.ots(result));
@@ -377,8 +381,7 @@ export default class MongoWrapper<T extends Document = Document> {
   @MongoWrapper.withCacheAndLogging(false)
   public async find<R extends Document = T>(
     filter: Filter<T> = {},
-    options: Pick<FindOptions<T>, 'projection' | 'sort' | 'limit' | 'skip'> &
-      QueryOptions = {},
+    options: FindOptions & QueryOptions = {},
   ): Promise<R[]> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { cache, ...opts } = options;
@@ -406,10 +409,12 @@ export default class MongoWrapper<T extends Document = Document> {
   @MongoWrapper.withCacheAndLogging(false)
   public async aggregate<R extends Document = Document>(
     pipeline: Document[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    options: QueryOptions = {},
+    options: QueryOptions & AggregateOptions = {},
   ): Promise<R[]> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { cache, ...opts } = options;
     const cursor = (await this.db()).aggregate<R>(this.sto(pipeline), {
+      ...opts,
       session: this.session,
     });
     const result = await cursor.toArray();
@@ -421,10 +426,12 @@ export default class MongoWrapper<T extends Document = Document> {
   @MongoWrapper.withCacheAndLogging(false)
   public async count(
     filter: Filter<T> = {},
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    options: QueryOptions = {},
+    options: QueryOptions & CountDocumentsOptions = {},
   ): Promise<number> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { cache, ...opts } = options;
     return (await this.db()).countDocuments(this.sto(filter), {
+      ...opts,
       session: this.session,
     });
   }
@@ -486,15 +493,12 @@ export default class MongoWrapper<T extends Document = Document> {
   public async replaceOne(
     filter: Filter<T>,
     document: OptionalUnlessRequiredId<T>,
-    {
-      skipSetOnUpdate = false,
-      ...options
-    }: ReplaceOptions & { skipSetOnUpdate?: boolean } = {},
+    { ...options }: ReplaceOptions = {},
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     return (await this.db())
       .replaceOne(
         this.sto(filter),
-        this.sto(await this.onUpdate(document, skipSetOnUpdate)) as T,
+        this.sto(await this.onInsert(document)) as T,
         {
           ...options,
           session: this.session,
